@@ -109,7 +109,7 @@ class BMDModel(TrainingModelInt):
         fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
-        D_pred_real = self.netD(torch.cat(xp, drr), dim=1)
+        D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
         g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss

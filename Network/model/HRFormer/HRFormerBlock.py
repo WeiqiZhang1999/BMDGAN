@@ -298,7 +298,7 @@ class HighResolutionTransformerModule(nn.Module):
                                     # ),
                                     LayerHelper.get_norm_layer(num_features=num_outchannels_conv3x3,
                                                                norm_type=self.norm_type),
-                                    nn.ReLU(True),
+                                    nn.ReLU(False),
                                 )
                             )
                     fuse_layer.append(nn.Sequential(*conv3x3s))

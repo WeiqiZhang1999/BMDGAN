@@ -112,36 +112,34 @@ class BMDModel(TrainingModelInt):
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
         g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
-        log["G_GAN"] = g_loss
+        log["G_GAN"] = g_loss.detach()
         G_loss += g_loss * self.lambda_GAN
 
         if self.lambda_AE > 0.:
             ae_loss = torch.nn.functional.l1_loss(drr, fake_drr)
-            log["G_AE"] = ae_loss
+            log["G_AE"] = ae_loss.detach()
             G_loss = G_loss + ae_loss * self.lambda_AE
 
         if self.lambda_FM > 0.:
             fm_loss = calculate_FM_loss(D_pred_fake, D_pred_real,
                                         self.netD.module.n_layer,
                                         self.netD.module.num_D)
-            log["G_FM"] = fm_loss
+            log["G_FM"] = fm_loss.detach()
             G_loss += fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0.:
             gc_loss = self.crit_GC(drr, fake_drr)
-            log["G_GC"] = gc_loss
+            log["G_GC"] = gc_loss.detach()
             G_loss += gc_loss * self.lambda_GC
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
         d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.module.num_D
         d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.module.num_D
-        log["D_real"] = d_loss_real
-        log["D_fake"] = d_loss_fake
+        log["D_real"] = d_loss_real.detach()
+        log["D_fake"] = d_loss_fake.detach()
         D_loss = D_loss + d_loss_real * 0.5 + d_loss_fake * 0.5
 
-        for k, v in log.items():
-            log[k] = v.detach()
         return G_loss, D_loss, log
 
     def train_batch(self, data, batch_id, epoch):

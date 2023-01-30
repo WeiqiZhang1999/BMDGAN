@@ -1,4 +1,3 @@
-
 from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
 import numpy as np
@@ -67,8 +66,8 @@ class TrainingDataset(Dataset):
             for drr_path in self.drr_pool:
                 args.append((drr_path, self.load_size))
             self.drr_pool = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
-                                                       desc="Loading DRR" if self.verbose else None,
-                                                       mininterval=60, maxinterval=180)
+                                                        desc="Loading DRR" if self.verbose else None,
+                                                        mininterval=60, maxinterval=180)
 
     def __len__(self):
         return len(self.xp_pool)
@@ -118,7 +117,6 @@ class TrainingDataset(Dataset):
         img = ImageHelper.denormal(img)
         img = ImageHelper.resize(img, output_shape=load_size)
         return img.astype(np.float32)
-
 
     transformer_param_dict = {"paired_synthesis": dict(
         brightness_range=(0.5, 1.5),

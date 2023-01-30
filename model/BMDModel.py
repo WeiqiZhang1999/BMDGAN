@@ -59,11 +59,11 @@ class BMDModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
-        # if self.rank == 0:
-        #     self.netG_enc.apply(weights_init)
-        #     self.netG_fus.apply(weights_init)
-        #     self.netG_up.apply(weights_init)
-        #     self.netD.apply(weights_init)
+        if self.rank == 0:
+            self.netG_enc.apply(weights_init)
+            self.netG_fus.apply(weights_init)
+            self.netG_up.apply(weights_init)
+            self.netD.apply(weights_init)
 
         # Wrap DDP
         self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
@@ -278,7 +278,8 @@ class BMDModel(TrainingModelInt):
 def weights_init(m):
     classname = m.__class__.__name__
     if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_normal_(m.weight, mode="fan_out")
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        # nn.init.kaiming_normal_(m.weight, mode="fan_out")
         if m.bias is not None:
             nn.init.zeros_(m.bias)
     elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):

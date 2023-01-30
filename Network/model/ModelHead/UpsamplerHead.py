@@ -3,7 +3,7 @@ from ...utils.LayerHelper import LayerHelper
 
 
 class UpsamplerHead(nn.Module):
-    def __init__(self, ngf, n_upsampling, output_nc, norm_type, padding_type):
+    def __init__(self, ngf=64, n_upsampling=2, output_nc=1, norm_type="group", padding_type="reflect"):
         super(UpsamplerHead, self).__init__()
         self.model = []
         for i in range(n_upsampling):

@@ -87,9 +87,9 @@ class MlpDW(nn.Module):
 
         if N == (H * W + 1):
             cls_tokens = x[:, 0, :]
-            x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W)
+            x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W).contiguous()
         else:
-            x_ = x.permute(0, 2, 1).reshape(B, C, H, W)
+            x_ = x.permute(0, 2, 1).reshape(B, C, H, W).contiguous()
 
         x_ = self.fc1(x_)
         x_ = self.act1(x_)
@@ -98,7 +98,7 @@ class MlpDW(nn.Module):
         x_ = self.drop(x_)
         x_ = self.fc2(x_)
         x_ = self.drop(x_)
-        x_ = x_.reshape(B, C, -1).permute(0, 2, 1)
+        x_ = x_.reshape(B, C, -1).permute(0, 2, 1).contiguous()
 
         if N == (H * W + 1):
             x = torch.cat((cls_tokens.unsqueeze(1), x_), dim=1)
@@ -150,9 +150,9 @@ class MlpDWBN(nn.Module):
             B, N, C = x.shape
             if N == (H * W + 1):
                 cls_tokens = x[:, 0, :]
-                x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W)
+                x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W).contiguous()
             else:
-                x_ = x.permute(0, 2, 1).reshape(B, C, H, W)
+                x_ = x.permute(0, 2, 1).reshape(B, C, H, W).contiguous()
 
             x_ = self.fc1(x_)
             x_ = self.norm1(x_)
@@ -165,7 +165,7 @@ class MlpDWBN(nn.Module):
             x_ = self.norm3(x_)
             x_ = self.act3(x_)
             # x_ = self.drop(x_)
-            x_ = x_.reshape(B, C, -1).permute(0, 2, 1)
+            x_ = x_.reshape(B, C, -1).permute(0, 2, 1).contiguous()
             if N == (H * W + 1):
                 x = torch.cat((cls_tokens.unsqueeze(1), x_), dim=1)
             else:
@@ -226,12 +226,12 @@ class MlpConvBN(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
-        x = x.transpose(1, 2)
+        x = x.transpose(1, 2).contiguous()
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)
         x = self.fc2(x)
-        x = x.transpose(1, 2)
+        x = x.transpose(1, 2).contiguous()
         x = self.drop(x)
         return x
 
@@ -266,9 +266,9 @@ class MlpWODWBN(nn.Module):
             B, N, C = x.shape
             if N == (H * W + 1):
                 cls_tokens = x[:, 0, :]
-                x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W)
+                x_ = x[:, 1:, :].permute(0, 2, 1).reshape(B, C, H, W).contiguous()
             else:
-                x_ = x.permute(0, 2, 1).reshape(B, C, H, W)
+                x_ = x.permute(0, 2, 1).reshape(B, C, H, W).contiguous()
 
             x_ = self.fc1(x_)
             x_ = self.norm1(x_)
@@ -277,7 +277,7 @@ class MlpWODWBN(nn.Module):
             x_ = self.norm3(x_)
             x_ = self.act3(x_)
             x_ = self.drop(x_)
-            x_ = x_.reshape(B, C, -1).permute(0, 2, 1)
+            x_ = x_.reshape(B, C, -1).permute(0, 2, 1).contiguous()
             if N == (H * W + 1):
                 x = torch.cat((cls_tokens.unsqueeze(1), x_), dim=1)
             else:

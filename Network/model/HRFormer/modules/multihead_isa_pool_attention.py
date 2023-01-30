@@ -37,10 +37,10 @@ class InterlacedPoolAttention(nn.Module):
         # pad
         x_pad = self.pad_helper.pad_if_needed(x, x.size())
         # permute
-        x_permute = self.permute_helper.permute(x_pad, x_pad.size())
+        x_permute = self.permute_helper.permute(x_pad, x_pad.size()).contiguous()
         # attention
         out, _, _ = self.attn(x_permute, x_permute, x_permute, rpe=self.with_rpe, **kwargs)
         # reverse permutation
         out = self.permute_helper.rev_permute(out, x_pad.size())
         out = self.pad_helper.depad_if_needed(out, x.size())
-        return out.reshape(B, N, C)
+        return out.reshape(B, N, C).contiguous()

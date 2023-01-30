@@ -107,13 +107,13 @@ class GeneralTransformerBlock(nn.Module):
     def forward(self, x, mask=None):
         B, C, H, W = x.size()
         # reshape
-        x = x.view(B, C, -1).permute(0, 2, 1)
+        x = x.view(B, C, -1).permute(0, 2, 1).contiguous()
         # Attention
         x = x + self.drop_path(self.attn(self.norm1(x), H, W))
         # FFN
         x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
         # reshape
-        x = x.permute(0, 2, 1).view(B, C, H, W)
+        x = x.permute(0, 2, 1).view(B, C, H, W).contiguous()
         return x
 
     def extra_repr(self):

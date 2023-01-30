@@ -249,11 +249,11 @@ class MultiheadAttention(Module):
             )
             key_padding_mask = key_padding_mask.to(torch.bool)
 
-        q = q.contiguous().view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
+        q = q.contiguous().view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1).contiguous()
         if k is not None:
-            k = k.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
+            k = k.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1).contiguous()
         if v is not None:
-            v = v.contiguous().view(-1, bsz * num_heads, v_head_dim).transpose(0, 1)
+            v = v.contiguous().view(-1, bsz * num_heads, v_head_dim).transpose(0, 1).contiguous()
 
         src_len = k.size(1)
 
@@ -286,7 +286,7 @@ class MultiheadAttention(Module):
             if key_padding_mask is not None:
                 key_padding_mask = pad(key_padding_mask, (0, 1))
 
-        attn_output_weights = torch.bmm(q, k.transpose(1, 2))
+        attn_output_weights = torch.bmm(q, k.transpose(1, 2).contiguous())
         assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
 
         """

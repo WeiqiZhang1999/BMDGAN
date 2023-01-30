@@ -104,9 +104,9 @@ class BMDModel(TrainingModelInt):
     def __compute_loss(self, data):
         G_loss = 0.
         log = {}
-        xp = data["xp"].to(self.device)
-        drr = data["drr"].to(self.device)
-        fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
+        xp = data["xp"].to(self.device).contiguous()
+        drr = data["drr"].to(self.device).contiguous()
+        fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp))).contiguous()
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))

@@ -41,7 +41,7 @@ class TrainingDataset(Dataset):
         self.xp_pool = []
         self.drr_pool = []
         for case_name in training_case_names:
-            case_xp_dir = OSHelper.path_join(self.xp_pool, case_name)
+            case_xp_dir = OSHelper.path_join(self.xp_root, case_name)
             if not OSHelper.path_exists(case_xp_dir):
                 continue
             for slice_entry in OSHelper.scan_dirs_for_file(case_xp_dir, name_re_pattern=".+\\.mhd$"):

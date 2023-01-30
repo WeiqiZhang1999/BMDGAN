@@ -59,11 +59,11 @@ class BMDModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
-        if self.rank == 0:
-            self.netG_enc.apply(weights_init)
-            self.netG_fus.apply(weights_init)
-            self.netG_up.apply(weights_init)
-            self.netD.apply(weights_init)
+        # if self.rank == 0:
+        #     self.netG_enc.apply(weights_init)
+        #     self.netG_fus.apply(weights_init)
+        #     self.netG_up.apply(weights_init)
+        #     self.netD.apply(weights_init)
 
         # Wrap DDP
         self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
@@ -104,9 +104,9 @@ class BMDModel(TrainingModelInt):
     def __compute_loss(self, data):
         G_loss = 0.
         log = {}
-        xp = data["xp"].to(self.device).contiguous()
-        drr = data["drr"].to(self.device).contiguous()
-        fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp))).contiguous()
+        xp = data["xp"].to(self.device)
+        drr = data["drr"].to(self.device)
+        fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
@@ -116,7 +116,7 @@ class BMDModel(TrainingModelInt):
         G_loss += g_loss * self.lambda_GAN
 
         if self.lambda_AE > 0.:
-            ae_loss = torch.nn.functional.l1_loss(drr.contiguous(), fake_drr.contiguous())
+            ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
             log["G_AE"] = ae_loss.detach()
             G_loss = G_loss + ae_loss * self.lambda_AE
 

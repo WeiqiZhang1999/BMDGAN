@@ -29,7 +29,7 @@ class BMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 model_config,
+                 netG_enc_config,
                  netG_up_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
@@ -45,7 +45,7 @@ class BMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
 
         # Prepare models
-        self.netG_enc = HighResolutionTransformer(**model_config).to(self.device)
+        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
         self.optimizer_config = optimizer_config
         # self.clip_grad = clip_grad
         # self.clip_max_norm = clip_max_norm

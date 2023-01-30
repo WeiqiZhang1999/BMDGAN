@@ -345,7 +345,7 @@ class HighResolutionTransformer(nn.Module):
 
     def __init__(self,
                  cfg,
-                 input_nc,
+                 input_nc=1,
                  drop_path_rate=None,
                  norm_type="group",
                  padding_type="reflect",

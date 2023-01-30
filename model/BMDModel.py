@@ -216,6 +216,7 @@ class BMDModel(TrainingModelInt):
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
             ret["BMD_PCC(AVG)"] = pcc
+        return ret
 
     @torch.no_grad()
     def log_visual(self, data):

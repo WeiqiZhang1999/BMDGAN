@@ -116,7 +116,7 @@ class BMDModel(TrainingModelInt):
         G_loss += g_loss * self.lambda_GAN
 
         if self.lambda_AE > 0.:
-            ae_loss = torch.nn.functional.l1_loss(drr, fake_drr)
+            ae_loss = torch.nn.functional.l1_loss(drr.contiguous(), fake_drr.contiguous())
             log["G_AE"] = ae_loss.detach()
             G_loss = G_loss + ae_loss * self.lambda_AE
 

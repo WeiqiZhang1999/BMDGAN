@@ -3,11 +3,9 @@
 #  All rights reserved.
 #  This file can not be copied and/or distributed without the express permission of Yi GU.
 
-import copy
 import warnings
 
 import torch
-import torch.nn.functional as F
 from torch import nn, Tensor
 from torch.nn.modules.module import Module
 from torch._jit_internal import Optional, Tuple

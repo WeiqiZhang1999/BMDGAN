@@ -6,7 +6,7 @@
 import torch.nn as nn
 
 BN_MOMENTUM = 0.1
-from Network3.utils.LayerHelper import LayerHelper
+from ....utils.LayerHelper import LayerHelper
 
 
 class Bottleneck(nn.Module):

@@ -5,7 +5,7 @@
 
 import torch
 import torch.nn as nn
-from Network3.utils.LayerHelper import LayerHelper
+from ....utils.LayerHelper import LayerHelper
 
 
 class Mlp(nn.Module):

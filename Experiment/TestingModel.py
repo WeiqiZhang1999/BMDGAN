@@ -109,12 +109,11 @@ class TestingModel(BaseExperiment):
                 ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                             reduction=None, data_range=255.)
 
-
                 input = xps[i].cpu().detach()
                 input_denomal = ImageHelper.denormal(input)
                 input_np = make_np(torch.clamp(input_denomal, 0., 255.)).transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(input_dir,
-                                                  f"{name[i]}.png"), input_np)
+                                               f"{name[i]}.png"), input_np)
 
                 target_np = make_np(drrs_.cpu().detach()).astype(np.uint8)
                 # print(target_np.shape)

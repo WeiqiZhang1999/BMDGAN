@@ -135,3 +135,4 @@ class TestingModel(BaseExperiment):
         for k, v in ret.items():
             msg += "%s: %.3f " % (k, v)
         logging.info(msg)
+        print(msg)

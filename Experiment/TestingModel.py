@@ -112,11 +112,11 @@ class TestingModel(BaseExperiment):
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                   f"{name[i]}.png"), input_np)
 
-                target_np = make_np(drrs_).transpose(1, 2, 0).astype(np.uint8)
+                target_np = make_np(drrs_).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(target_dir,
                                                f"{name[i]}.png"), target_np)
 
-                fake_np = make_np(fake_drrs_).transpose(1, 2, 0).astype(np.uint8)
+                fake_np = make_np(fake_drrs_).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(output_dir,
                                                f"{name[i]}.png"), fake_np)
 

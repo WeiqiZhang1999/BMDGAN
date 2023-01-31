@@ -113,15 +113,16 @@ class TestingModel(BaseExperiment):
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                   f"{name[i]}.png"), input_np)
 
-                target_np = make_np(drrs_).astype(np.uint8)
-                print(target_np.shape)
+                target_np = make_np(drrs_[i].cpu().detach()).astype(np.uint8)
+                # print(target_np.shape)
                 target_np = convert_to_HWC(target_np, input_format="CHW")
                 cv2.imwrite(OSHelper.path_join(target_dir,
                                                f"{name[i]}.png"), target_np)
 
-                # fake_np = make_np(fake_drrs_)
-                # cv2.imwrite(OSHelper.path_join(output_dir,
-                #                                f"{name[i]}.png"), fake_np)
+                fake_np = make_np(fake_drrs_[i].cpu().detach()).astype(np.uint8)
+                fake_np = convert_to_HWC(fake_np, input_format="CHW")
+                cv2.imwrite(OSHelper.path_join(output_dir,
+                                               f"{name[i]}.png"), fake_np)
 
             total_count += B
 

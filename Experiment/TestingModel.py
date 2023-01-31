@@ -74,7 +74,7 @@ class TestingModel(BaseExperiment):
         model = model(**self.__model_config)
 
         model.load_model(load_dir=self._output_dir, prefix="ckp", strict=True,
-                         resume=True)
+                         resume=False)
 
         logging.info(f"Testing model loaded from {str(OSHelper.path_join(self._output_dir, 'ckp_state.pt'))}")
 
@@ -101,12 +101,12 @@ class TestingModel(BaseExperiment):
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
-            drrs_ = torch.clamp(drrs_, 0., 255.)
-            fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
+            drrs_val = torch.clamp(drrs_, 0., 255.)
+            fake_drrs_val = torch.clamp(fake_drrs_, 0., 255.)
 
-            psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
+            psnr += peak_signal_noise_ratio(fake_drrs_val, drrs_val,
                                             reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-            ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
+            ssim += structural_similarity_index_measure(fake_drrs_val, drrs_val,
                                                         reduction=None, data_range=255.).sum()
 
             for i in range(B):

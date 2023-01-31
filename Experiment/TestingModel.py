@@ -20,6 +20,7 @@ import logging
 from Dataset.DataModule2 import DataModule
 from tqdm import tqdm
 from tensorboardX.x2num import make_np
+from tensorboardX.utils import convert_to_HWC
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 import cv2
@@ -112,10 +113,12 @@ class TestingModel(BaseExperiment):
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                   f"{name[i]}.png"), input_np)
 
-                # target_np = make_np(drrs_)
-                # cv2.imwrite(OSHelper.path_join(target_dir,
-                #                                f"{name[i]}.png"), target_np)
-                #
+                target_np = make_np(drrs_).astype(np.uint8)
+                print(target_np.shape)
+                target_np = convert_to_HWC(target_np, input_format="CHW")
+                cv2.imwrite(OSHelper.path_join(target_dir,
+                                               f"{name[i]}.png"), target_np)
+
                 # fake_np = make_np(fake_drrs_)
                 # cv2.imwrite(OSHelper.path_join(output_dir,
                 #                                f"{name[i]}.png"), fake_np)

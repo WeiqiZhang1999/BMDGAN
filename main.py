@@ -16,7 +16,6 @@ if torch.cuda.is_available():
     torch.backends.cudnn.allow_tf32 = False
 
 
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--work_space_dir", type=str, required=True)
@@ -37,7 +36,6 @@ def main():
     exp.run()
 
     pass
-
 
 
 if __name__ == '__main__':

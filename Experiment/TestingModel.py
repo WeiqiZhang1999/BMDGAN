@@ -105,7 +105,7 @@ class TestingModel(BaseExperiment):
                 fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
 
                 psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
-                                                reduction=None, dim=(1, 2, 3), data_range=255.)
+                                                reduction=None, data_range=255.)
                 ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                             reduction=None, data_range=255.)
 

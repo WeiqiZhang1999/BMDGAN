@@ -90,7 +90,7 @@ class TestingModel(BaseExperiment):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            name = data["name"].to(self.device)
+            name = data["name"]
             fake_drrs = model.test_generator(drrs)
 
             drrs_ = ImageHelper.denormal(drrs)

@@ -94,32 +94,35 @@ class TestingModel(BaseExperiment):
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
             name = data["name"]
-            fake_drrs = model.test_generator(drrs)
-
-            drrs_ = ImageHelper.denormal(drrs)
-            fake_drrs_ = ImageHelper.denormal(fake_drrs)
-            drrs_ = torch.clamp(drrs_, 0., 255.)
-            fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
-
-            psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
-                                            reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-            ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
-                                                        reduction=None, data_range=255.).sum()
 
             for i in range(B):
+                drr_per = drrs[i]
+                fake_drrs = model.test_generator(drr_per)
+
+                drrs_ = ImageHelper.denormal(drr_per)
+                fake_drrs_ = ImageHelper.denormal(fake_drrs)
+                drrs_ = torch.clamp(drrs_, 0., 255.)
+                fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
+
+                psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
+                                                reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
+                                                            reduction=None, data_range=255.).sum()
+
+
                 input = xps[i].cpu().detach()
                 input_denomal = ImageHelper.denormal(input)
                 input_np = make_np(torch.clamp(input_denomal, 0., 255.)).transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                   f"{name[i]}.png"), input_np)
 
-                target_np = make_np(drrs_[i].cpu().detach()).astype(np.uint8)
+                target_np = make_np(drrs_.cpu().detach()).astype(np.uint8)
                 # print(target_np.shape)
                 target_np = convert_to_HWC(target_np, input_format="CHW")
                 cv2.imwrite(OSHelper.path_join(target_dir,
                                                f"{name[i]}.png"), target_np)
 
-                fake_np = make_np(fake_drrs_[i].cpu().detach()).astype(np.uint8)
+                fake_np = make_np(fake_drrs_.cpu().detach()).astype(np.uint8)
                 fake_np = convert_to_HWC(fake_np, input_format="CHW")
                 cv2.imwrite(OSHelper.path_join(output_dir,
                                                f"{name[i]}.png"), fake_np)

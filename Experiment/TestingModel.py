@@ -94,13 +94,13 @@ class TestingModel(BaseExperiment):
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
             name = data["name"]
+            fake_drrs = model.test_generator(drrs)
 
             for i in range(B):
                 drr_per = drrs[i]
-                fake_drrs = model.test_generator(drr_per)
-
+                fake_drr_per = fake_drrs[i]
                 drrs_ = ImageHelper.denormal(drr_per)
-                fake_drrs_ = ImageHelper.denormal(fake_drrs)
+                fake_drrs_ = ImageHelper.denormal(fake_drr_per)
                 drrs_ = torch.clamp(drrs_, 0., 255.)
                 fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
 

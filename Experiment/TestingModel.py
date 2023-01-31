@@ -19,6 +19,7 @@ from Utils.ImageHelper import ImageHelper
 import logging
 from Dataset.DataModule2 import DataModule
 from tqdm import tqdm
+from tensorboardX.x2num import make_np
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 
@@ -106,16 +107,16 @@ class TestingModel(BaseExperiment):
             for i in range(B):
                 input = xps[i].cpu().detach()
                 input_denomal = ImageHelper.denormal(input)
-                input_np = np.numpy(torch.clamp(input_denomal, 0., 255.), type=np.uint8).transpose(1, 2, 0)
+                input_np = make_np(torch.clamp(input_denomal, 0., 255.)).transpose(1, 2, 0).astype(np.uint8)
                 input_img = Image.fromarray(input_np)
                 input_img.save(OSHelper.path_join(input_dir,
                                                   f"{name[i]}.png"), format='PNG')
-                target_np = np.numpy(drrs_, type=np.uint8).transpose(1, 2, 0)
+                target_np = make_np(drrs_).transpose(1, 2, 0).astype(np.uint8)
                 target_img = Image.fromarray(target_np)
                 target_img.save(OSHelper.path_join(target_dir,
                                                    f"{name[i]}.png"), format='PNG')
 
-                fake_np = np.numpy(fake_drrs_, type=np.uint8).transpose(1, 2, 0)
+                fake_np = make_np(fake_drrs_).transpose(1, 2, 0).astype(np.uint8)
                 fake_img = Image.fromarray(fake_np)
                 fake_img.save(OSHelper.path_join(output_dir,
                                                  f"{name[i]}.png"), format='PNG')

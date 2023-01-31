@@ -36,13 +36,18 @@ class BMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  log_pcc=False,
+                 use_ddp=True
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0
                  ):
-        self.rank = DDPHelper.rank()
-        self.local_rank = DDPHelper.local_rank()
-        self.device = torch.device(self.local_rank)
+
+        if use_ddp:
+            self.rank = DDPHelper.rank()
+            self.local_rank = DDPHelper.local_rank()
+            self.device = torch.device(self.local_rank)
+        else:
+            self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -59,17 +64,18 @@ class BMDModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
-        if self.rank == 0:
-            self.netG_enc.apply(weights_init)
-            self.netG_fus.apply(weights_init)
-            self.netG_up.apply(weights_init)
-            self.netD.apply(weights_init)
+        if use_ddp:
+            if self.rank == 0:
+                self.netG_enc.apply(weights_init)
+                self.netG_fus.apply(weights_init)
+                self.netG_up.apply(weights_init)
+                self.netD.apply(weights_init)
 
-        # Wrap DDP
-        self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
-        self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
-        self.netG_up = DDPHelper.shell_ddp(self.netG_up)
-        self.netD = DDPHelper.shell_ddp(self.netD)
+            # Wrap DDP
+            self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
+            self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
+            self.netG_up = DDPHelper.shell_ddp(self.netG_up)
+            self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
@@ -142,6 +148,11 @@ class BMDModel(TrainingModelInt):
 
         return G_loss, D_loss, log
 
+    @torch.no_grad()
+    def test_generator(self, x):
+        fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(x)))
+        return fake_drrs
+
     def train_batch(self, data, batch_id, epoch):
         g_loss, d_loss, log = self.__compute_loss(data)
 
@@ -194,7 +205,8 @@ class BMDModel(TrainingModelInt):
                 fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
                 fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
                 for i in range(B):
-                    inference_ai_list.append(self._calc_average_intensity_with_th(fake_drrs_, self.THRESHOLD_DXA_BMD_315))
+                    inference_ai_list.append(
+                        self._calc_average_intensity_with_th(fake_drrs_, self.THRESHOLD_DXA_BMD_315))
                 gt_bmds.append(data["DXABMD"].view(-1))
             total_count += B
 
@@ -205,7 +217,7 @@ class BMDModel(TrainingModelInt):
             DDPHelper.all_reduce(ssim, DDPHelper.ReduceOp.AVG)
 
         ret = {"PSNR": psnr.cpu().numpy(),
-                "SSIM": ssim.cpu().numpy()}
+               "SSIM": ssim.cpu().numpy()}
 
         if self.log_bmd_pcc:
             gt_bmds = torch.cat(gt_bmds)
@@ -215,6 +227,7 @@ class BMDModel(TrainingModelInt):
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
             ret["BMD_PCC(AVG)"] = pcc
         return ret
+
 
     @torch.no_grad()
     def log_visual(self, data):
@@ -275,6 +288,7 @@ class BMDModel(TrainingModelInt):
         numerator = (image * mask).sum()
         return numerator / area
 
+
 def weights_init(m):
     classname = m.__class__.__name__
     if isinstance(m, nn.Conv2d):
@@ -304,9 +318,3 @@ def calculate_FM_loss(pred_fake: torch.Tensor,
             loss_G_FM = loss_G_FM + D_weights * feat_weights * torch.mean(
                 torch.abs(pred_fake[i][j] - pred_real[i][j].detach()))
     return loss_G_FM
-
-
-
-
-
-

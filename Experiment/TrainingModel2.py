@@ -193,10 +193,10 @@ class TrainingModel(BaseExperiment):
                     tb_writer.add_scalar(f"train/{k}", scalar_value=v, global_step=epoch + self.__tb_epoch_shift)
 
             log_visual = False
-            if rank == 0 and datamodule.visual_dataloader is not None and self.__log_visual_every_n_epochs is not None:
-                if epoch % self.__log_visual_every_n_epochs == 0:
+            if rank == 0 and datamodule.visual_dataloader:
+                if self.__log_visual_every_n_epochs is not None and epoch % self.__log_visual_every_n_epochs == 0:
                     log_visual = True
-                if epoch in self.__log_visual_epoch_list:
+                if self.__log_visual_epoch_list is not None and epoch in self.__log_visual_epoch_list:
                     log_visual = True
 
             if log_visual:

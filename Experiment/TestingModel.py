@@ -28,7 +28,7 @@ class TestingModel(BaseExperiment):
     def __init__(self,
                  model_config,
                  datamodule_config,
-                 model_dir,
+                 model_dir=None,
                  stage=1,
                  accelerator=None,
                  pretrain_load_prefix="ckp",

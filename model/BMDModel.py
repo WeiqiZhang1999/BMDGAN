@@ -253,6 +253,7 @@ class BMDModel(TrainingModelInt):
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
+            print(f"Model {signature} loaded from {load_path}")
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)

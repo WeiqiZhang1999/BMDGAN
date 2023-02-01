@@ -56,7 +56,7 @@ class InferenceModel(BaseExperiment):
         model: InferenceModelInt = model(**self.model_config)
 
         assert self.pretrain_load_dir is not None
-        load_dir = self.pretrain_load_dir
+        load_dir = OSHelper.format_path(self.pretrain_load_dir)
         if self.load_pretrain_fold:
             load_dir = OSHelper.path_join(load_dir, str(self._split_fold))
         model.load_model(load_dir=load_dir, prefix=self.pretrain_load_prefix)

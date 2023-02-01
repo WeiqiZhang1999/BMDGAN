@@ -8,6 +8,8 @@
 from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
 import numpy as np
+import pandas as pd
+import torch
 from Utils.ImageHelper import ImageHelper
 from ImageTransformer.ImageTransformer import ImageTransformer, IdentityTransformer
 from MultiProcessingHelper import MultiProcessingHelper
@@ -45,8 +47,12 @@ class TrainingDataset(Dataset):
         self.xp_root = OSHelper.path_join(self.data_root, "Xp_315")
         self.drr_root = OSHelper.path_join(self.data_root, "DXA_DRR_315")
 
+        self.bmd_df_root = OSHelper.path_join(self.data_root, "case_info(newCTBMD).xlsx")
+        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=1)
+
         self.xp_pool = []
         self.drr_pool = []
+        self.bmd_pool = []
         for case_name in training_case_names:
             case_xp_dir = OSHelper.path_join(self.xp_root, case_name)
             if not OSHelper.path_exists(case_xp_dir):
@@ -56,7 +62,8 @@ class TrainingDataset(Dataset):
                 assert OSHelper.path_exists(drr_path), drr_path
                 self.xp_pool.append(slice_entry.path)
                 self.drr_pool.append(drr_path)
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0
+            self.bmd_pool.append(self.bmd_df.loc[case_name, 'DXABMD'])
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.bmd_pool) > 0
 
         if self.verbose:
             print("Trainig Datasets")
@@ -82,6 +89,7 @@ class TrainingDataset(Dataset):
 
     def __getitem__(self, idx):
         xp_path, drr_path = self.xp_pool[idx], self.drr_pool[idx]
+        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
 
         if self.preload:
             xp, drr = xp_path.copy(), drr_path.copy()
@@ -112,7 +120,7 @@ class TrainingDataset(Dataset):
         drr = drr.astype(np.float32)
         drr = np.transpose(drr, (2, 0, 1))
 
-        return {"xp": xp, "drr": drr}
+        return {"xp": xp, "drr": drr, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

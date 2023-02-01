@@ -333,7 +333,8 @@ class BMDModelInference(InferenceModelInt):
                 space = spaces[i]
                 MetaImageHelper.write(OSHelper.path_join(output_dir, case_name, f"{slice_id}.mhd"),
                                       fake_drr,
-                                      space)
+                                      space,
+                                      compress=True)
 
 
 def weights_init(m):

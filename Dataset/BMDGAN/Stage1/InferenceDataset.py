@@ -8,6 +8,15 @@ from Utils.MetaImageHelper2 import MetaImageHelper
 import json
 
 
+from dataclasses import dataclass
+
+@dataclass
+class MetaImageDAO:
+    case_name: str
+    slice_id: str | int
+    image
+
+
 class InferenceDataset(Dataset):
 
     def __init__(self,

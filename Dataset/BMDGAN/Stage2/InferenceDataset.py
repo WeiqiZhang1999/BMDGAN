@@ -52,8 +52,8 @@ class InferenceDataset(Dataset):
                 assert OSHelper.path_exists(drr_path), drr_path
                 self.xp_pool.append(slice_entry.path)
                 self.drr_pool.append(drr_path)
-            self.bmd_pool.append(self.bmd_df.loc[case_name, 'DXABMD'])
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0  and len(self.bmd_pool) > 0
+                self.bmd_pool.append(self.bmd_df.loc[case_name, 'DXABMD'])
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.bmd_pool) > 0
 
         if self.verbose:
             print("Test Datasets")

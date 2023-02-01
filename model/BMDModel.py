@@ -176,8 +176,7 @@ class BMDModel(TrainingModelInt):
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
         if self.log_bmd_pcc:
-            # pcc = torch.tensor([0.]).to(self.device)
-            pcc = torch.tensor([0.])
+            pcc = torch.tensor([0.]).to(self.device)
             inference_ai_list = []
             gt_bmds = []
 
@@ -221,8 +220,8 @@ class BMDModel(TrainingModelInt):
                "SSIM": ssim.cpu().numpy()}
 
         if self.log_bmd_pcc:
-            gt_bmds = torch.cat(gt_bmds)
-            gt_bmds = gt_bmds.cpu().numpy()
+            inference_ai_list = torch.cat(inference_ai_list).view(-1).cpu().numpy()
+            gt_bmds = torch.cat(gt_bmds).cpu().numpy()
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)

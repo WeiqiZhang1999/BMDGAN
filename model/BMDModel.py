@@ -329,7 +329,7 @@ class BMDModelInference(InferenceModelInt):
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
             slice_ids = data["slice_id"]
-            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
+            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):

@@ -64,4 +64,4 @@ class InferenceModel(BaseExperiment):
                                 seed=self._seed,
                                 split_fold=self._split_fold,
                                 **self.datamodule_config)
-        model.inference_and_save(datamodule=datamodule, output_dir=self._output_dir)
+        model.inference_and_save(data_module=datamodule, output_dir=self._output_dir)

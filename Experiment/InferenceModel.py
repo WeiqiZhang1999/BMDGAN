@@ -39,7 +39,7 @@ class InferenceModel(BaseExperiment):
         self.datamodule_config = datamodule_config
 
     def run(self):
-        if self.__accelerator == "DDP":
+        if self.accelerator == "DDP":
             DDPHelper.init_process_group()
             assert DDPHelper.is_initialized()
 

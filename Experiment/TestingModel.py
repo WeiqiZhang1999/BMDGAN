@@ -110,19 +110,19 @@ class TestingModel(BaseExperiment):
                                                         reduction=None, data_range=255.).sum()
 
             for i in range(B):
-                drr_per = drrs[i]
-                fake_drr_per = fake_drrs[i]
+                drr_per = drrs_val[i].cpu().detach().numpy()
+                fake_drr_per = fake_drrs_val[i].cpu().detach().numpy()
                 input = xps[i].cpu().detach()
                 input_denomal = ImageHelper.denormal(input)
                 input_np = make_np(torch.clamp(input_denomal, 0., 255.)).transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                f"{name[i]}.png"), input_np)
 
-                target_np = make_np(drr_per.cpu().detach()).transpose(1, 2, 0).astype(np.uint8)
+                target_np = drr_per.transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(target_dir,
                                                f"{name[i]}.png"), target_np)
 
-                fake_np = make_np(fake_drr_per.cpu().detach()).transpose(1, 2, 0).astype(np.uint8)
+                fake_np = fake_drr_per.transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(output_dir,
                                                f"{name[i]}.png"), fake_np)
 

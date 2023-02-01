@@ -205,7 +205,7 @@ class BMDModel(TrainingModelInt):
                 fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
                 for i in range(B):
                     inference_ai_list.append(
-                        self._calc_average_intensity_with_th(fake_drrs_, self.THRESHOLD_DXA_BMD_315))
+                        self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
                 gt_bmds.append(data["DXABMD"].view(-1))
             total_count += B
 
@@ -312,13 +312,19 @@ class BMDModelInference(InferenceModelInt):
         for signature in ["netG_up", "netG_fus", "netG_enc"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net.module, load_path, strict=True)
+            TorchHelper.load_network_by_path(net, load_path, strict=True)
             logging.info(f"Model {signature} loaded from {load_path}")
 
     @torch.no_grad()
     def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):
         assert data_module.inference_dataloader is not None
-        for data in data_module.inference_dataloader:
+        iterator = data_module.inference_dataloader
+        if self.rank == 0:
+            iterator = tqdm(data_module.inference_dataloader,
+                            total=len(data_module.inference_dataloader),
+                            mininterval=60, maxinterval=180,)
+
+        for data in iterator:
             xps = data["xp"].to(self.device)
             spaces = data["spacing"]
             case_names = data["case_name"]
@@ -331,7 +337,9 @@ class BMDModelInference(InferenceModelInt):
                 case_name = case_names[i]
                 slice_id = slice_ids[i]
                 space = spaces[i]
-                MetaImageHelper.write(OSHelper.path_join(output_dir, case_name, f"{slice_id}.mhd"),
+                save_dir = OSHelper.path_join(output_dir, "fake_drr", case_name)
+                OSHelper.mkdirs(save_dir)
+                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{slice_id}.mhd"),
                                       fake_drr,
                                       space,
                                       compress=True)

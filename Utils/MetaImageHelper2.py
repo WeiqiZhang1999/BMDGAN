@@ -28,7 +28,7 @@ class MetaImageHelper:
         return image, meta["ElementSpacing"][::-1], meta
 
     @staticmethod
-    def write(path: AnyStr, array: np.ndarray, spacing=None, compress=True):
+    def write(path: AnyStr, array: np.ndarray, spacing=None | np.ndarray, compress=True):
         if spacing is not None:
             element_spacing = spacing[::-1]
         else:

@@ -326,7 +326,7 @@ class BMDModelInference(InferenceModelInt):
 
         for data in iterator:
             xps = data["xp"].to(self.device)
-            spaces = data["spacing"]
+            spaces = data["spacing"].numpy()
             case_names = data["case_name"]
             slice_ids = data["slice_id"]
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))

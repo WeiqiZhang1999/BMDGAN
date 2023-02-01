@@ -176,7 +176,8 @@ class BMDModel(TrainingModelInt):
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
         if self.log_bmd_pcc:
-            pcc = torch.tensor([0.]).to(self.device)
+            # pcc = torch.tensor([0.]).to(self.device)
+            pcc = torch.tensor([0.])
             inference_ai_list = []
             gt_bmds = []
 
@@ -227,7 +228,6 @@ class BMDModel(TrainingModelInt):
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
             ret["BMD_PCC(AVG)"] = pcc
         return ret
-
 
     @torch.no_grad()
     def log_visual(self, data):

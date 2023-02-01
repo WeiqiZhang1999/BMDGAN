@@ -117,6 +117,7 @@ class TestingModel(BaseExperiment):
                 cv2.imwrite(OSHelper.path_join(input_dir,
                                                f"{name[i]}.png"), input_np)
 
+
                 target_np = drr_per.transpose(1, 2, 0).astype(np.uint8)
                 cv2.imwrite(OSHelper.path_join(target_dir,
                                                f"{name[i]}.png"), target_np)

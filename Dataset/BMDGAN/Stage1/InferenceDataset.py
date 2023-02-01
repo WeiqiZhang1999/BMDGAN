@@ -102,7 +102,7 @@ class InferenceDataset(Dataset):
         case_name = xp_dao.case_name
         slice_id = xp_dao.slice_id
 
-        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name, "slide_id": slice_id}
+        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name, "slice_id": slice_id}
 
 
     @staticmethod

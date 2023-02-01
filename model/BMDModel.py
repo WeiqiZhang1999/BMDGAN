@@ -23,6 +23,9 @@ from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
 import torch.nn as nn
 import math
+from Dataset.DataModule2 import DataModule
+from .InferenceModelInt import InferenceModelInt
+from Utils.MetaImageHelper2 import MetaImageHelper
 
 
 class BMDModel(TrainingModelInt):
@@ -42,12 +45,9 @@ class BMDModel(TrainingModelInt):
                  # clip_norm_type=2.0
                  ):
 
-        if use_ddp:
-            self.rank = DDPHelper.rank()
-            self.local_rank = DDPHelper.local_rank()
-            self.device = torch.device(self.local_rank)
-        else:
-            self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.rank = DDPHelper.rank()
+        self.local_rank = DDPHelper.local_rank()
+        self.device = torch.device(self.local_rank)
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -64,18 +64,17 @@ class BMDModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
-        if use_ddp:
-            if self.rank == 0:
-                self.netG_enc.apply(weights_init)
-                self.netG_fus.apply(weights_init)
-                self.netG_up.apply(weights_init)
-                self.netD.apply(weights_init)
+        if self.rank == 0:
+            self.netG_enc.apply(weights_init)
+            self.netG_fus.apply(weights_init)
+            self.netG_up.apply(weights_init)
+            self.netD.apply(weights_init)
 
             # Wrap DDP
-            self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
-            self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
-            self.netG_up = DDPHelper.shell_ddp(self.netG_up)
-            self.netD = DDPHelper.shell_ddp(self.netD)
+        self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
+        self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
+        self.netG_up = DDPHelper.shell_ddp(self.netG_up)
+        self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
@@ -220,7 +219,7 @@ class BMDModel(TrainingModelInt):
                "SSIM": ssim.cpu().numpy()}
 
         if self.log_bmd_pcc:
-            inference_ai_list = torch.cat(inference_ai_list).view(-1).cpu().numpy()
+            inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
             gt_bmds = torch.cat(gt_bmds).cpu().numpy()
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
@@ -284,9 +283,57 @@ class BMDModel(TrainingModelInt):
         mask = image >= threshold
         area = mask.sum()
         if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.Tensor(0, dtype=image.dtype, device=image.device)
             return 0.
         numerator = (image * mask).sum()
         return numerator / area
+
+
+class BMDModelInference(InferenceModelInt):
+
+    def __init__(self,
+                 netG_enc_config,
+                 netG_up_config):
+        self.rank = DDPHelper.rank()
+        self.local_rank = DDPHelper.local_rank()
+        self.device = torch.device(self.local_rank)
+
+        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                     output_nc=(64 * (2 ** 2)),
+                                                     norm_type="group",
+                                                     padding_type="reflect").to(self.device)
+        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+        netG_up_config.pop("class")
+        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+
+    def load_model(self, load_dir: AnyStr, prefix="ckp"):
+        for signature in ["netG_up", "netG_fus", "netG_enc"]:
+            net = getattr(self, signature)
+            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+            TorchHelper.load_network_by_path(net.module, load_path, strict=True)
+            logging.info(f"Model {signature} loaded from {load_path}")
+
+    @torch.no_grad()
+    def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):
+        assert data_module.inference_dataloader is not None
+        for data in data_module.inference_dataloader:
+            xps = data["xp"].to(self.device)
+            spaces = data["spacing"]
+            case_names = data["case_name"]
+            slice_ids = data["slice_ids"]
+            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
+
+            B = xps.shape[0]
+            for i in range(B):
+                fake_drr = fake_drrs[i]  # (1, H, W)
+                case_name = case_names[i]
+                slice_id = slice_ids[i]
+                space = spaces[i]
+                MetaImageHelper.write(OSHelper.path_join(output_dir, case_name, f"{slice_id}.mhd"),
+                                      fake_drr,
+                                      space)
 
 
 def weights_init(m):

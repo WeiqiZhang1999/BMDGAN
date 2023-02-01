@@ -98,7 +98,6 @@ class TestingModel(BaseExperiment):
             name = data["name"]
             fake_drrs = model.test_generator(drrs)
 
-
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
             drrs_val = torch.clamp(drrs_, 0., 255.)
@@ -130,6 +129,7 @@ class TestingModel(BaseExperiment):
 
         psnr /= total_count
         ssim /= total_count
+        print(total_count)
 
         ret = {"PSNR": psnr.cpu().numpy(),
                "SSIM": ssim.cpu().numpy()}

@@ -8,7 +8,7 @@
 import numpy as np
 import torch
 import os
-from ..Utils.MetaImageHelper2 import MetaImageHelper
+from Utils.MetaImageHelper2 import MetaImageHelper
 
 
 def denormal(image, ret_min_val=0., ret_max_val=255.):

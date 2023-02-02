@@ -122,13 +122,21 @@ class InferenceDataset(Dataset):
 
     @staticmethod
     def _load_image(load_path, load_size):
-        img, _ = MetaImageHelper.read(load_path)
+        img, spacing = MetaImageHelper.read(load_path)
         if img.ndim < 3:
             img = img[..., np.newaxis]
+            spacing = np.concatenate([spacing, np.ones((1,))])
         else:
             img = np.transpose(img, (1, 2, 0))  # (H, W, 1)
+            temp_spacing = spacing.copy()
+            spacing[0], spacing[1], spacing[2] = temp_spacing[1], temp_spacing[2], temp_spacing[0]
         img = img.astype(np.float64)
-        img = ImageHelper.resize(img, output_shape=load_size)  # [-1, 1] (H, W, 1)
+
+        # img = ImageHelper.resize(img, output_shape=load_size)
+        img, spacing = MetaImageHelper.resize_2D(img, spacing, output_shape=load_size) # [-1, 1] (H, W, 1)
+
         img = np.transpose(img, (2, 0, 1))  # (1, H, W)
+        temp_spacing = spacing.copy()
+        spacing[0], spacing[1], spacing[2] = temp_spacing[2], temp_spacing[0], temp_spacing[1]
         img = np.clip(img, -1., 1.)
-        return img.astype(np.float32)
+        return img.astype(np.float32), spacing

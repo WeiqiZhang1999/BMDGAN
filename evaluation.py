@@ -86,7 +86,7 @@ def task(case_name):
 
             psnr += PSNR(fake_drr_normal, gt_drr_normal)
             ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                          data_range=255.0, channel_axis=None)
+                                          data_range=255.0, multichannel=True)
             total_count += 1
 
     return psnr, ssim, total_count
@@ -102,7 +102,7 @@ def main():
     for case_name in case_name_list:
         args.append((case_name, ))
 
-    result = MultiProcessingHelper().run(args=args, func=task, n_workers=8, desc="task",
+    result = MultiProcessingHelper().run(args=args, func=task, n_workers=32, desc="task",
                                          mininterval=30, maxinterval=90)
     psnr = 0.
     total_count = 0.

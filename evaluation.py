@@ -86,7 +86,7 @@ def task(case_name):
 
             psnr += PSNR(fake_drr_normal, gt_drr_normal)
             ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                          data_range=255.0, multichannel=True)
+                                          data_range=255.0, channel_axis=None)
             total_count += 1
 
     return psnr, ssim, total_count

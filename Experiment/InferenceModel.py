@@ -65,4 +65,5 @@ class InferenceModel(BaseExperiment):
                                 split_fold=self._split_fold,
                                 **self.datamodule_config)
         output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))
+        OSHelper.mkdirs(output_dir)
         model.inference_and_save(data_module=datamodule, output_dir=output_dir)

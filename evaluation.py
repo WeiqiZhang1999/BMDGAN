@@ -12,6 +12,7 @@ from Utils.MetaImageHelper2 import MetaImageHelper
 from MultiProcessingHelper import MultiProcessingHelper
 from time import time
 from skimage.metrics import structural_similarity
+import argparse
 
 
 def load_image(load_path, load_size):
@@ -94,6 +95,9 @@ def task(case_name):
 
 def main():
     start = time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num_workers", type=int)
+    args_ = parser.parse_args()
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230131_test/inference_e630/output/fake_drr'
 
@@ -102,7 +106,7 @@ def main():
     for case_name in case_name_list:
         args.append((case_name, ))
 
-    result = MultiProcessingHelper().run(args=args, func=task, n_workers=32, desc="task",
+    result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
                                          mininterval=30, maxinterval=90)
     psnr = 0.
     total_count = 0.

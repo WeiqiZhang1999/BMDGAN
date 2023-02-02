@@ -102,7 +102,8 @@ def main():
     for case_name in case_name_list:
         args.append((case_name, ))
 
-    result = MultiProcessingHelper().run(args=args, func=task, n_workers=4, desc="task")
+    result = MultiProcessingHelper().run(args=args, func=task, n_workers=8, desc="task",
+                                         mininterval=30, maxinterval=90)
     psnr = 0.
     total_count = 0.
     ssim = 0.

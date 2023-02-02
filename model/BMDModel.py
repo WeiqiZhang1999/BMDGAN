@@ -374,3 +374,4 @@ def calculate_FM_loss(pred_fake: torch.Tensor,
             loss_G_FM = loss_G_FM + D_weights * feat_weights * torch.mean(
                 torch.abs(pred_fake[i][j] - pred_real[i][j].detach()))
     return loss_G_FM
+

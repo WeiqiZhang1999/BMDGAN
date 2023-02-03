@@ -94,7 +94,7 @@ class VQBMDModel(TrainingModelInt):
 
             # Wrap DDP
         self.encoder = DDPHelper.shell_ddp(self.encoder)
-        self.quantize = DDPHelper.shell_ddp(self.quantize)
+        # self.quantize = DDPHelper.shell_ddp(self.quantize)
         self.decoder = DDPHelper.shell_ddp(self.decoder)
         self.netD = DDPHelper.shell_ddp(self.netD)
 

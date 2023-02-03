@@ -118,8 +118,8 @@ def task(case_name, fold):
             gt_bmds.append(bmd_df.loc[case_name, 'DXABMD'])
 
             psnr += PSNR(fake_drr_normal, gt_drr_normal)
-            ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                          data_range=255.0, multichannel=True)
+            # ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
+            #                               data_range=255.0, multichannel=True)
             total_count += 1
 
     return psnr, ssim, inference_ai_list, gt_bmds, total_count
@@ -169,10 +169,11 @@ def main():
 
     # fake_bmd = np.concatenate(fake_bmd_list)
     # gt_bmd = np.concatenate(gt_bmd_List)
+    print(fake_bmd_list)
     pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
 
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
-    print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    # print(f'Mean SSIM: %.3f' % (ssim / total_count))
     print('PCC:  %.3f' % pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))

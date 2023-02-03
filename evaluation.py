@@ -36,6 +36,18 @@ def load_image(load_path, load_size):
     return img.astype(np.float32), spacing
 
 
+def _calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
+                                    threshold: int | float) -> float | np.ndarray | torch.Tensor:
+    mask = image >= threshold
+    area = mask.sum()
+    if area <= 0.:
+        if isinstance(image, torch.Tensor):
+            return torch.Tensor(0, dtype=image.dtype, device=image.device)
+        return 0.
+    numerator = (image * mask).sum()
+    return numerator / area
+
+
 def denormal(image, ret_min_val=0., ret_max_val=255.):
     if not (image.min() >= -1. and image.max() <= 1.):
         raise RuntimeError(f"Unexpected data range: {image.min()} {image.max()}")
@@ -67,8 +79,8 @@ def task(case_name):
     ssim = 0.
     total_count = 0.
     # for case_name in case_name_list:
-    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230131_test/inference_e630/output/fake_drr'
+    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
     base_fake_dir = os.path.join(fake_path, case_name)
     base_gt_dir = os.path.join(gt_path, case_name)
 
@@ -100,7 +112,7 @@ def main():
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cpus for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230131_test/inference_e630/output/fake_drr'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
 
     case_name_list = os.listdir(fake_path)
     args = []
@@ -112,7 +124,7 @@ def main():
     psnr = 0.
     total_count = 0.
     ssim = 0.
-    for i, j, k  in result:
+    for i, j, k in result:
         psnr += i
         ssim += j
         total_count += k

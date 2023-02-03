@@ -74,13 +74,14 @@ def PSNR(x, y, eps=1e-12, max_val=255.):
     return 10. * tmp
 
 
-def task(case_name):
+def task(case_name, fold):
     psnr = 0.
     ssim = 0.
     total_count = 0.
     # for case_name in case_name_list:
     gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output'
+    fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
     base_fake_dir = os.path.join(fake_path, case_name)
     base_gt_dir = os.path.join(gt_path, case_name)
 
@@ -108,7 +109,7 @@ def task(case_name):
 def main():
     start = time()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_workers", type=int)
+    parser.add_argument("--num_workers", type=int, default=4)
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
@@ -116,13 +117,13 @@ def main():
     fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
     fold_list = os.listdir(fake_path)
 
-    final = tuple()
+    final = list()
     for fold in fold_list:
         base_dir = os.path.join(fake_path, fold, 'fake_drr')
         case_name_list = os.listdir(base_dir)
         args = []
         for case_name in case_name_list:
-            args.append((case_name,))
+            args.append((case_name, fold))
 
         result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
                                              mininterval=30, maxinterval=90)
@@ -135,6 +136,7 @@ def main():
     #
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
+    print(final)
     psnr = 0.
     total_count = 0.
     ssim = 0.

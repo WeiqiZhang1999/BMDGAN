@@ -39,7 +39,6 @@ class BMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  log_pcc=False,
-                 use_ddp=True
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0

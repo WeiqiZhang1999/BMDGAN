@@ -87,8 +87,8 @@ def task(case_name, fold):
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 40398.234376
     THRESHOLD_DXA_BMD_315 = 1591.5
-    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output'
+    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=1)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
@@ -129,11 +129,12 @@ def main():
     start = time()
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--stage", type=int, default=1)
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     # fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
     fold_list = os.listdir(fake_path)
 
     final = list()
@@ -158,22 +159,30 @@ def main():
     psnr = 0.
     total_count = 0.
     ssim = 0.
-    fake_bmd_list = []
-    gt_bmd_List = []
-    for i, j, l1, l2, k in final:
-        psnr += i
-        ssim += j
-        fake_bmd_list += l1
-        gt_bmd_List += l2
-        total_count += k
+    if args_.stage == 1:
+        for i, j, k in final:
+            psnr += i
+            ssim += j
+            total_count += k
+    else:
+        fake_bmd_list = []
+        gt_bmd_List = []
+        for i, j, l1, l2, k in final:
+            psnr += i
+            ssim += j
+            fake_bmd_list += l1
+            gt_bmd_List += l2
+            total_count += k
 
     # fake_bmd = np.concatenate(fake_bmd_list)
     # gt_bmd = np.concatenate(gt_bmd_List)
-    pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+
 
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
-    print('PCC:  %.3f' % pcc)
+    if args_.stage == 2:
+        pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+        print('PCC:  %.3f' % pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

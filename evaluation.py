@@ -6,6 +6,7 @@
 # @Software: PyCharm
 
 import numpy as np
+import pandas as pd
 import torch
 import os
 from Utils.MetaImageHelper2 import MetaImageHelper
@@ -13,6 +14,7 @@ from MultiProcessingHelper import MultiProcessingHelper
 from time import time
 from skimage.metrics import structural_similarity
 import argparse
+import pandas
 
 
 def load_image(load_path, load_size):
@@ -36,7 +38,7 @@ def load_image(load_path, load_size):
     return img.astype(np.float32), spacing
 
 
-def _calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
+def calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
                                     threshold: int | float) -> float | np.ndarray | torch.Tensor:
     mask = image >= threshold
     area = mask.sum()
@@ -77,10 +79,17 @@ def PSNR(x, y, eps=1e-12, max_val=255.):
 def task(case_name, fold):
     psnr = 0.
     ssim = 0.
+    inference_ai_list = []
+    gt_bmds = []
     total_count = 0.
     # for case_name in case_name_list:
+    MIN_VAL_DXA_DRR_315 = 0.
+    MAX_VAL_DXA_DRR_315 = 40398.234376
+    THRESHOLD_DXA_BMD_315 = 1591.5
     gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output'
+    bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
+    bmd_df = pd.read_excel(bmd_path, index_col=1)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
     base_fake_dir = os.path.join(fake_path, case_name)
     base_gt_dir = os.path.join(gt_path, case_name)
@@ -98,12 +107,21 @@ def task(case_name, fold):
             fake_drr_normal = denormal(fake_drr)
             gt_drr_normal = denormal(gt_drr)
 
+            # PCC
+            fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
+            fake_drr_ = torch.clamp(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
+
+            inference_ai_list.append(
+                calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
+
+            gt_bmds.append(bmd_df.loc[case_name, 'DXABMD'])
+
             psnr += PSNR(fake_drr_normal, gt_drr_normal)
             ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
                                           data_range=255.0, multichannel=True)
             total_count += 1
 
-    return psnr, ssim, total_count
+    return psnr, ssim, inference_ai_list, gt_bmds, total_count
 
 
 def main():
@@ -136,14 +154,19 @@ def main():
     #
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
-    print(final)
     psnr = 0.
     total_count = 0.
     ssim = 0.
-    for i, j, k in final:
+    fake_bmd_list = []
+    gt_bmd_List = []
+    for i, j, l1, l2, k in final:
         psnr += i
         ssim += j
+        fake_bmd_list += l1
+        gt_bmd_List += l2
         total_count += k
+
+
 
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))

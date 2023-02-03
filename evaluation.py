@@ -112,19 +112,33 @@ def main():
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
+    # fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
+    fold_list = os.listdir(fake_path)
 
-    case_name_list = os.listdir(fake_path)
-    args = []
-    for case_name in case_name_list:
-        args.append((case_name, ))
+    final = tuple()
+    for fold in fold_list:
+        base_dir = os.path.join(fake_path, fold, 'fake_drr')
+        case_name_list = os.listdir(base_dir)
+        args = []
+        for case_name in case_name_list:
+            args.append((case_name,))
 
-    result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
-                                         mininterval=30, maxinterval=90)
+        result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
+                                             mininterval=30, maxinterval=90)
+        final += result
+
+    # case_name_list = os.listdir(fake_path)
+    # args = []
+    # for case_name in case_name_list:
+    #     args.append((case_name, ))
+    #
+    # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
+    #                                      mininterval=30, maxinterval=90)
     psnr = 0.
     total_count = 0.
     ssim = 0.
-    for i, j, k in result:
+    for i, j, k in final:
         psnr += i
         ssim += j
         total_count += k

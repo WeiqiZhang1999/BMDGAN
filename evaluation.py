@@ -145,8 +145,8 @@ def task1(case_name, fold):
             fake_drr, _ = MetaImageHelper.read(fake_drr_path)
             gt_drr, _ = load_image(gt_drr_path, [512, 256])
 
-            fake_drr_normal = denormal(fake_drr)
-            gt_drr_normal = denormal(gt_drr)
+            fake_drr_normal = np.clip(denormal(fake_drr), -1.0, 1.0)
+            gt_drr_normal = np.clip(denormal(gt_drr), -1.0, 1.0)
 
             psnr += PSNR(fake_drr_normal, gt_drr_normal)
             ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),

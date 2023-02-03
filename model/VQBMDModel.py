@@ -18,14 +18,13 @@ from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 
-from Network.model.VectorQuantizer import EMAVectorQuantizer
+from Network.model.VQGAN.VectorQuantizer import EMAVectorQuantizer
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
-from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
-
+from Network.model.VQGAN.VQVAE import VQVAE
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
@@ -40,7 +39,6 @@ class VQBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_enc_config,
                  netG_up_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
@@ -48,9 +46,6 @@ class VQBMDModel(TrainingModelInt):
                  lambda_GC=1.,
                  lambda_VQ=1.,
                  log_pcc=False,
-                 emb_dim=512,
-                 num_embeddings=1024,
-                 beta=0.25,
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0
@@ -61,41 +56,44 @@ class VQBMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
 
         # Prepare models
-        self.netG_enc = HighResolutionTransformer(**netG_enc_config)
+        # self.netG_enc = HighResolutionTransformer(**netG_enc_config)
         self.optimizer_config = optimizer_config
-        # self.clip_grad = clip_grad
-        # self.clip_max_norm = clip_max_norm
-        # self.clip_norm_type = clip_norm_type
-        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                     output_nc=(64 * (2 ** 2)),
-                                                     norm_type="group",
-                                                     padding_type="reflect")
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config)
-
-        self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
-        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv).to(self.device)
-        self.quantize = EMAVectorQuantizer(
-            emb_dim,
-            num_embeddings,
-            beta=beta
-        ).to(self.device)
-        self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        self.decoder = nn.Sequential(self.post_quant_conv, self.netG_up).to(self.device)
+        # # self.clip_grad = clip_grad
+        # # self.clip_max_norm = clip_max_norm
+        # # self.clip_norm_type = clip_norm_type
+        # self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+        #                                              output_nc=(64 * (2 ** 2)),
+        #                                              norm_type="group",
+        #                                              padding_type="reflect")
+        # self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+        # netG_up_config.pop("class")
+        # self.netG_up = self.netG_up(**netG_up_config)
+        #
+        # self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
+        # self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv).to(self.device)
+        # self.quantize = EMAVectorQuantizer(
+        #     emb_dim,
+        #     num_embeddings,
+        #     beta=beta
+        # ).to(self.device)
+        # self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
+        # self.decoder = nn.Sequential(self.post_quant_conv, self.netG_up).to(self.device)
+        self.netG = VQVAE(netG_up_config).to(self.device)
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:
-            self.encoder.apply(weights_init)
-            self.quantize.apply(weights_init)
-            self.decoder.apply(weights_init)
+            # self.encoder.apply(weights_init)
+            # self.quantize.apply(weights_init)
+            # self.decoder.apply(weights_init)
+            self.netG.apply(weights_init)
             self.netD.apply(weights_init)
 
             # Wrap DDP
-        self.encoder = DDPHelper.shell_ddp(self.encoder)
+        # self.encoder = DDPHelper.shell_ddp(self.encoder)
         # self.quantize = DDPHelper.shell_ddp(self.quantize)
-        self.decoder = DDPHelper.shell_ddp(self.decoder)
+        # self.decoder = DDPHelper.shell_ddp(self.decoder)
+        self.netG = DDPHelper.shell_ddp(self.netG)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
@@ -118,8 +116,10 @@ class VQBMDModel(TrainingModelInt):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        self.decoder.module.parameters()),
+        # self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
+        #                                                 self.decoder.module.parameters()),
+        #                                 **self.optimizer_config)
+        self.netG_optimizer = optimizer(self.netG.module.parameters(),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
@@ -128,26 +128,12 @@ class VQBMDModel(TrainingModelInt):
         self.netD_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer, self.netD_optimizer]
 
-    def encode(self, x):
-        h = self.encoder(x)
-        quant, emb_loss, info = self.quantize(h)
-        return quant, emb_loss, info
-
-    def decode(self, quant):
-        dec = self.decoder(quant)
-        return dec
-
-    def forward(self, x):
-        quant, diff, _, = self.encode(x)
-        dec = self.decode(quant)
-        return dec, diff
-
     def __compute_loss(self, data):
         G_loss = 0.
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr, vq_fake = self.forward(xp)
+        fake_drr, vq_fake = self.netG(xp)
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
@@ -156,7 +142,7 @@ class VQBMDModel(TrainingModelInt):
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
 
-        _, vq_gt = self.forward(drr)
+        _, vq_gt = self.netG(drr)
         vq_loss = torch.mean(torch.abs(vq_fake.detach().contiguous() - vq_gt.detach().contiguous())).to(self.device)
         log["G_VQ"] = vq_loss.detach()
         G_loss = G_loss + vq_loss * self.lambda_VQ
@@ -224,7 +210,7 @@ class VQBMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            fake_drrs, _ = self.forward(xps)
+            fake_drrs, _ = self.netG(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -267,7 +253,7 @@ class VQBMDModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs, _ = self.forward(xps)
+        fake_drrs, _ = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         ret = {"Xray": xps,
                "DRR": drrs,
@@ -282,7 +268,8 @@ class VQBMDModel(TrainingModelInt):
         if resume:
             assert strict == True
 
-        for signature in ["encoder", "quantize", "decoder", "netD"]:
+        # for signature in ["encoder", "quantize", "decoder", "netD"]:
+        for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
@@ -291,7 +278,7 @@ class VQBMDModel(TrainingModelInt):
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["encoder", "quantize", "decoder", "netD"]:
+        for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
             torch.save(net.module.state_dict(), save_path)
@@ -299,21 +286,14 @@ class VQBMDModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["encoder", "quantize", "decoder", "netD"]:
-                if signature != 'quantize':
-                    net = getattr(self, signature)
-                    net.module.train()
-                else:
-                    net = getattr(self, signature)
-                    net.train()
+            for signature in ["netG", "netD"]:
+                net = getattr(self, signature)
+                net.module.train()
         else:
-            for signature in ["encoder", "quantize", "decoder", "netD"]:
-                if signature != 'quantize':
-                    net = getattr(self, signature)
-                    net.module.eval()
-                else:
-                    net = getattr(self, signature)
-                    net.eval()
+            for signature in ["netG", "netD"]:
+                net = getattr(self, signature)
+                net.module.eval()
+
 
     def on_train_batch_end(self, *args, **kwargs):
         pass

@@ -14,6 +14,7 @@ from MultiProcessingHelper import MultiProcessingHelper
 from time import time
 from skimage.metrics import structural_similarity
 import argparse
+from scipy.stats import pearsonr
 import pandas
 
 
@@ -166,10 +167,13 @@ def main():
         gt_bmd_List += l2
         total_count += k
 
-
+    # fake_bmd = np.concatenate(fake_bmd_list)
+    # gt_bmd = np.concatenate(gt_bmd_List)
+    pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
 
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    print('PCC:  %.3f' % pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

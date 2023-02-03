@@ -82,7 +82,7 @@ class VQBMDModel(TrainingModelInt):
             beta=beta
         ).to(self.device)
         self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv).to(self.device)
+        self.decoder = nn.Sequential(self.post_quant_conv, self.netG_up).to(self.device)
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 

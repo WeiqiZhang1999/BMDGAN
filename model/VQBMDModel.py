@@ -119,7 +119,7 @@ class VQBMDModel(TrainingModelInt):
         self.optimizer_config.pop("class")
 
         self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        self.quantize.parameters(),
+                                                        # self.quantize.parameters(),
                                                         self.decoder.module.parameters()),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)

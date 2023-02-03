@@ -110,7 +110,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_workers", type=int)
     args_ = parser.parse_args()
-    print(f"Using {args_.num_workers} Cpus for Multiprocessing")
+    print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
 

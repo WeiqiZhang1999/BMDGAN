@@ -119,7 +119,7 @@ class VQBMDModel(TrainingModelInt):
         self.optimizer_config.pop("class")
 
         self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        # self.quantize.parameters(),
+                                                        self.quantize.parameters(),
                                                         self.decoder.module.parameters()),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
@@ -158,9 +158,9 @@ class VQBMDModel(TrainingModelInt):
         G_loss += g_loss * self.lambda_GAN
 
         _, vq_gt = self.forward(drr)
-        vq_loss = torch.mean(torch.abs(vq_fake.detach() - vq_gt.detach())).to(self.device)
+        vq_loss = torch.mean(torch.abs(vq_fake.detach().contiguous() - vq_gt.detach().contiguous())).to(self.device)
         log["G_VQ"] = vq_loss.detach()
-        G_loss += vq_loss * self.lambda_VQ
+        G_loss = G_loss + vq_loss * self.lambda_VQ
 
         if self.lambda_AE > 0.:
             ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()

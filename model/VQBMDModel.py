@@ -301,12 +301,20 @@ class VQBMDModel(TrainingModelInt):
     def trigger_model(self, train: bool):
         if train:
             for signature in ["encoder", "quantize", "decoder", "netD"]:
-                net = getattr(self, signature)
-                net.module.train()
+                if signature != 'quantize':
+                    net = getattr(self, signature)
+                    net.module.train()
+                else:
+                    net = getattr(self, signature)
+                    net.train()
         else:
             for signature in ["encoder", "quantize", "decoder", "netD"]:
-                net = getattr(self, signature)
-                net.module.eval()
+                if signature != 'quantize':
+                    net = getattr(self, signature)
+                    net.module.eval()
+                else:
+                    net = getattr(self, signature)
+                    net.eval()
 
     def on_train_batch_end(self, *args, **kwargs):
         pass

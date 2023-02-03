@@ -142,8 +142,8 @@ class VQBMDModel(TrainingModelInt):
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
 
-        _, vq_fake, _ = self.netG.encode(xp)
-        _, vq_gt, _ = self.netG.encode(drr)
+        _, vq_fake, _ = self.netG.module.encode(xp)
+        _, vq_gt, _ = self.netG.module.encode(drr)
         vq_loss = torch.abs(vq_gt - vq_fake).mean()
         log["G_VQ"] = vq_loss.detach()
         G_loss = G_loss + vq_loss * self.lambda_VQ

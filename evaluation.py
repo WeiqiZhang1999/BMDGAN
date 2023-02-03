@@ -109,7 +109,7 @@ def task(case_name, fold):
 
             # PCC
             fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
-            fake_drr_ = torch.clamp(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
+            fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
             inference_ai_list.append(
                 calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))

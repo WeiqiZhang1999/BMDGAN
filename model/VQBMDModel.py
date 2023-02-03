@@ -75,14 +75,14 @@ class VQBMDModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config)
 
         self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
-        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv.to(self.device))
+        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv).to(self.device)
         self.quantize = EMAVectorQuantizer(
             emb_dim,
             num_embeddings,
             beta=beta
         ).to(self.device)
         self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv.to(self.device))
+        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv).to(self.device)
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 

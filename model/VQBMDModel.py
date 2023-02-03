@@ -7,6 +7,7 @@
 import itertools
 
 from Utils.DDPHelper import DDPHelper
+from Utils.ImageHelper import ImageHelper
 import torch
 import logging
 from typing import AnyStr
@@ -24,7 +25,7 @@ from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
-from Utils.ImageHelper import ImageHelper
+
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
@@ -60,7 +61,7 @@ class VQBMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
 
         # Prepare models
-        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+        self.netG_enc = HighResolutionTransformer(**netG_enc_config)
         self.optimizer_config = optimizer_config
         # self.clip_grad = clip_grad
         # self.clip_max_norm = clip_max_norm
@@ -68,20 +69,20 @@ class VQBMDModel(TrainingModelInt):
         self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
-                                                     padding_type="reflect").to(self.device)
+                                                     padding_type="reflect")
         self.netG_up = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        self.netG_up = self.netG_up(**netG_up_config)
 
         self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
-        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv)
+        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv.to(self.device))
         self.quantize = EMAVectorQuantizer(
             emb_dim,
             num_embeddings,
             beta=beta
-        )
+        ).to(self.device)
         self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv)
+        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv.to(self.device))
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 

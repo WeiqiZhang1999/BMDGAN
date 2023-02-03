@@ -77,7 +77,7 @@ def PSNR(x, y, eps=1e-12, max_val=255.):
     return 10. * tmp
 
 
-def task(case_name, fold):
+def task2(case_name, fold):
     psnr = 0.
     ssim = 0.
     inference_ai_list = []
@@ -124,6 +124,37 @@ def task(case_name, fold):
 
     return psnr, ssim, inference_ai_list, gt_bmds, total_count
 
+def task1(case_name, fold):
+    psnr = 0.
+    ssim = 0.
+    total_count = 0.
+
+    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
+    fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
+    base_fake_dir = os.path.join(fake_path, case_name)
+    base_gt_dir = os.path.join(gt_path, case_name)
+
+    slice_id_list = os.listdir(base_fake_dir)
+
+    for slice_id in slice_id_list:
+        if slice_id.split('.')[-1] == 'mhd':
+            fake_drr_path = os.path.join(base_fake_dir, slice_id)
+            gt_drr_path = os.path.join(base_gt_dir, slice_id)
+
+            fake_drr, _ = MetaImageHelper.read(fake_drr_path)
+            gt_drr, _ = load_image(gt_drr_path, [512, 256])
+
+            fake_drr_normal = denormal(fake_drr)
+            gt_drr_normal = denormal(gt_drr)
+
+            psnr += PSNR(fake_drr_normal, gt_drr_normal)
+            ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
+                                          data_range=255.0, multichannel=True)
+            total_count += 1
+
+    return psnr, ssim, total_count
+
 
 def main():
     start = time()
@@ -145,8 +176,12 @@ def main():
         for case_name in case_name_list:
             args.append((case_name, fold))
 
-        result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
-                                             mininterval=30, maxinterval=90)
+        if args_.stage == 1:
+            result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
+                                                 mininterval=30, maxinterval=90)
+        else:
+            result = MultiProcessingHelper().run(args=args, func=task2, n_workers=args_.num_workers, desc="task",
+                                                 mininterval=30, maxinterval=90)
         final += result
 
     # case_name_list = os.listdir(fake_path)

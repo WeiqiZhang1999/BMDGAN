@@ -133,14 +133,20 @@ class VQBMDModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr, vq_fake = self.netG(xp)
+        fake_drr, _ = self.netG(xp)
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
         g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss.detach()
-        G_loss = G_loss + g_loss * self.lambda_GAN + vq_fake * self.lambda_VQ
+        G_loss = G_loss + g_loss * self.lambda_GAN
+
+        _, vq_fake, _ = self.netG.encode(xp)
+        _, vq_gt, _ = self.netG.encode(drr)
+        vq_loss = torch.abs(vq_gt - vq_fake).mean()
+        log["G_VQ"] = vq_loss.detach()
+        G_loss = G_loss + vq_loss * self.lambda_VQ
 
         if self.lambda_AE > 0.:
             ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()

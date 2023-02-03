@@ -103,7 +103,7 @@ class VQBMDModel(TrainingModelInt):
         self.lambda_FM = lambda_FM
         self.lambda_GC = lambda_GC
         self.lambda_VQ = lambda_VQ
-        assert self.lambda_GAN > 0. and  self.lambda_VQ > 0.
+        assert self.lambda_GAN > 0. and self.lambda_VQ > 0.
         self.crit_GAN = LSGANLoss().to(self.device)
         if self.lambda_GC > 0.:
             self.crit_GC = GradientCorrelationLoss2D(grad_method="sobel").to(self.device)
@@ -155,7 +155,7 @@ class VQBMDModel(TrainingModelInt):
 
         g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss.detach()
-        G_loss += g_loss * self.lambda_GAN
+        G_loss = G_loss + g_loss * self.lambda_GAN
 
         _, vq_gt = self.forward(drr)
         vq_loss = torch.mean(torch.abs(vq_fake.detach().contiguous() - vq_gt.detach().contiguous())).to(self.device)
@@ -172,12 +172,12 @@ class VQBMDModel(TrainingModelInt):
                                         self.netD.module.n_layer,
                                         self.netD.module.num_D)
             log["G_FM"] = fm_loss.detach()
-            G_loss += fm_loss * self.lambda_FM
+            G_loss = G_loss + fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0.:
             gc_loss = self.crit_GC(drr, fake_drr)
             log["G_GC"] = gc_loss.detach()
-            G_loss += gc_loss * self.lambda_GC
+            G_loss = G_loss + gc_loss * self.lambda_GC
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))

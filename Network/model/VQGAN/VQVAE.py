@@ -58,7 +58,7 @@ class VQVAE(nn.Module):
 
         self.decoder = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config)
+        self.decoder = self.decoder(**netG_up_config)
 
     def encode(self, x):
         h = self.encoder(x)

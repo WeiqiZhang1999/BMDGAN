@@ -44,7 +44,7 @@ class LumbarInferenceDataset(Dataset):
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
         with open(OSHelper.path_join(self.data_root, r"jmid_lumbar_drr.json"), 'r') as f:
-            training_case_names = json.load(f)[str(split_fold)]["train"]
+            training_case_names = json.load(f)[str(split_fold)]["test"]
 
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':

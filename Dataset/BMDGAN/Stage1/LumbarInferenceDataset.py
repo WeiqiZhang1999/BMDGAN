@@ -21,7 +21,6 @@ from dataclasses import dataclass
 @dataclass
 class MetaImageDAO:
     case_name: str
-    slice_id: str | int
     image_path: AnyStr
     image_data: None | np.ndarray = None
     spacing: None | np.ndarray = None
@@ -67,13 +66,16 @@ class LumbarInferenceDataset(Dataset):
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.xp_root, drr_case_name)
 
+            xp_dao = MetaImageDAO(case_name, image_path=case_xp_dir)
+            drr_dao = MetaImageDAO(case_name, image_path=case_drr_dir)
+
             # if not OSHelper.path_exists(case_xp_dir):
             #     continue
             # for slice_entry in OSHelper.scan_dirs_for_file(case_xp_dir, name_re_pattern=".+\\.mhd$"):
             #     drr_path = OSHelper.path_join(self.drr_root, case_name, slice_entry.name)
             #     assert OSHelper.path_exists(drr_path), drr_path
-            self.xp_pool.append(case_xp_dir)
-            self.drr_pool.append(case_drr_dir)
+            self.xp_pool.append(xp_dao)
+            self.drr_pool.append(drr_dao)
         assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0
 
         if self.verbose:

@@ -120,9 +120,9 @@ class LumbarInferenceDataset(Dataset):
             xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
-        slice_id = xp_dao.slice_id
 
-        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name, "slice_id": slice_id}
+        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name}
+
 
     @staticmethod
     def _load_image(load_path, load_size):

@@ -108,11 +108,15 @@ class LumbarTrainingDataset(Dataset):
         drr = drr.astype(np.float64)
 
         transform_parameters = self.transformer.get_random_transform(img_shape=self.load_size)
-        xp = self.transformer.apply_transform(x=xp, transform_parameters=transform_parameters)
         if "brightness" in transform_parameters:
             transform_parameters.pop("brightness")
         if "contrast" in transform_parameters:
             transform_parameters.pop("contrast")
+        xp = self.transformer.apply_transform(x=xp, transform_parameters=transform_parameters)
+        # if "brightness" in transform_parameters:
+        #     transform_parameters.pop("brightness")
+        # if "contrast" in transform_parameters:
+        #     transform_parameters.pop("contrast")
         drr = self.transformer.apply_transform(x=drr, transform_parameters=transform_parameters)
 
         xp = ImageHelper.resize(xp, self.image_size) / 255.

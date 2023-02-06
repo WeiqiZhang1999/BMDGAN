@@ -31,14 +31,12 @@ class LumbarInferenceDataset(Dataset):
     def __init__(self,
                  split_fold: int | str,
                  image_size: tuple[int, int],
-                 load_size: tuple[int, int],
                  n_worker,
                  view='AP',
                  preload=True,
                  verbose=False):
         self.split_fold = split_fold
         self.image_size = image_size
-        self.load_size = load_size
         self.n_worker = n_worker
         self.preload = preload
         self.verbose = verbose
@@ -160,14 +158,12 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
     def __init__(self,
                  split_fold: int | str,
                  image_size: tuple[int, int],
-                 load_size: tuple[int, int],
                  n_worker,
                  view='AP',
                  preload=True,
                  verbose=False):
         self.split_fold = split_fold
         self.image_size = image_size
-        self.load_size = load_size
         self.n_worker = n_worker
         self.preload = preload
         self.verbose = verbose

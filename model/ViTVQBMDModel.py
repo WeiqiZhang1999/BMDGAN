@@ -279,7 +279,7 @@ class ViTVQBMDModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs, _ = self.netG(xps)
+        fake_drrs, _ = self.forward(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         ret = {"Xray": xps,
                "DRR": drrs,

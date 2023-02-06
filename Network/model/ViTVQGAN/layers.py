@@ -188,8 +188,6 @@ class ViTEncoder(nn.Module):
 
     def forward(self, img: torch.FloatTensor) -> torch.FloatTensor:
         x = self.to_patch_embedding(img)
-        print(f"------X shape: {x.shape}")
-        print(f"------en_pos_embedding shape: {self.en_pos_embedding.shape}")
         x = x + self.en_pos_embedding
         x = self.transformer(x)
 

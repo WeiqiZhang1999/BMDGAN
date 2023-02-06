@@ -69,7 +69,7 @@ class LumbarInferenceDataset(Dataset):
             drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
 
             xp_case_name = case_name + xp_suffix
-            drr_case_name = case_name + drr_suffix
+            drr_case_name = drr_suffix
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
@@ -199,7 +199,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
 
             xp_case_name = case_name + xp_suffix
-            drr_case_name = case_name + drr_suffix
+            drr_case_name = drr_suffix
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)

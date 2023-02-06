@@ -25,6 +25,7 @@ import torch.nn.functional as F
 
 class BaseQuantizer(nn.Module):
     def __init__(self, embed_dim: int, n_embed: int, straight_through: bool = True, use_norm: bool = True,
+                 eps: float = 1e-5, decay: float = 0.99,
                  use_residual: bool = False, num_quantizers: Optional[int] = None) -> None:
         super().__init__()
         self.straight_through = straight_through
@@ -36,7 +37,8 @@ class BaseQuantizer(nn.Module):
         self.embed_dim = embed_dim
         self.n_embed = n_embed
 
-        self.embedding = nn.Embedding(self.n_embed, self.embed_dim)
+        # self.embedding = nn.Embedding(self.n_embed, self.embed_dim)
+        self.embedding = EmbeddingEMA(self.n_embed, self.embed_dim, decay, eps)
         self.embedding.weight.data.normal_()
 
     def quantize(self, z: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor, torch.LongTensor]:

@@ -158,12 +158,12 @@ class Transformer(nn.Module):
 
 
 class ViTEncoder(nn.Module):
-    def __init__(self, image_size: Union[List[int, int], int], patch_size: Union[List[int, int], int],
+    def __init__(self, image_size: Union[Tuple[int, int], int], patch_size: Union[Tuple[int, int], int],
                  dim: int, depth: int, heads: int, mlp_dim: int, channels: int = 1, dim_head: int = 64) -> None:
         super().__init__()
-        image_height, image_width = image_size if isinstance(image_size, list) \
+        image_height, image_width = image_size if isinstance(image_size, tuple) \
                                     else (image_size, image_size)
-        patch_height, patch_width = patch_size if isinstance(patch_size, list) \
+        patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
                                     else (patch_size, patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
@@ -190,12 +190,12 @@ class ViTEncoder(nn.Module):
 
 
 class ViTDecoder(nn.Module):
-    def __init__(self, image_size: Union[List[int, int], int], patch_size: Union[List[int, int], int],
+    def __init__(self, image_size: Union[Tuple[int, int], int], patch_size: Union[Tuple[int, int], int],
                  dim: int, depth: int, heads: int, mlp_dim: int, channels: int = 1, dim_head: int = 64) -> None:
         super().__init__()
-        image_height, image_width = image_size if isinstance(image_size, list) \
+        image_height, image_width = image_size if isinstance(image_size, tuple) \
                                     else (image_size, image_size)
-        patch_height, patch_width = patch_size if isinstance(patch_size, list) \
+        patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
                                     else (patch_size, patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'

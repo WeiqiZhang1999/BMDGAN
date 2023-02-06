@@ -67,8 +67,8 @@ class ViTVQBMDModel(TrainingModelInt):
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:
-            self.encoder.apply(weights_init)
-            self.decoder.apply(weights_init)
+            # self.encoder.apply(weights_init)
+            # self.decoder.apply(weights_init)
             self.pre_quant.apply(weights_init)
             self.post_quant.apply(weights_init)
             self.netD.apply(weights_init)

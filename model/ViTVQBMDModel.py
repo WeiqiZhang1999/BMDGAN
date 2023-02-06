@@ -299,7 +299,10 @@ class ViTVQBMDModel(TrainingModelInt):
         # for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            if signature == "quantizer":
+                TorchHelper.load_network_by_path(net, load_path, strict=strict)
+            else:
+                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
             # print(f"Model {signature} loaded from {load_path}")
 
@@ -308,7 +311,10 @@ class ViTVQBMDModel(TrainingModelInt):
         for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
-            torch.save(net.module.state_dict(), save_path)
+            if signature == "quantizer":
+                torch.save(net.state_dict(), save_path)
+            else:
+                torch.save(net.module.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):

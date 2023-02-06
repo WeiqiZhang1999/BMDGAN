@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2/2/2023 10:08 PM
+# @Time    : 2/6/2023 4:16 PM
 # @Author  : ZHANG WEIQI
-# @File    : VQBMDModel.py
+# @File    : ViTVQBMDModel.py
 # @Software: PyCharm
-import itertools
 
+import itertools
 from Utils.DDPHelper import DDPHelper
 from Utils.ImageHelper import ImageHelper
 import torch
@@ -17,14 +17,14 @@ import numpy as np
 from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
-
-from Network.model.VQGAN.VectorQuantizer import EMAVectorQuantizer
+from typing import List, Tuple, Dict, Any, Optional
+from Network.model.ViTVQGAN.layers import ViTEncoder as Encoder, ViTDecoder as Decoder
+from Network.model.ViTVQGAN.Quantizer import VectorQuantizer, GumbelQuantizer
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
-from Network.model.VQGAN.VQVAE import VQVAE
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
@@ -35,20 +35,21 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class VQBMDModel(TrainingModelInt):
+class ViTVQBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_up_config,
+                 encoder_config,
+                 quantizer_config,
+                 decoder_config,
+                 image_size: int,
+                 patch_size: int,
                  lambda_GAN=1.,
                  lambda_AE=100.,
                  lambda_FM=10.,
                  lambda_GC=1.,
                  lambda_VQ=1.,
                  log_pcc=False,
-                 # clip_grad=False,
-                 # clip_max_norm=0.01,
-                 # clip_norm_type=2.0
                  ):
 
         self.rank = DDPHelper.rank()
@@ -56,44 +57,27 @@ class VQBMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
 
         # Prepare models
-        # self.netG_enc = HighResolutionTransformer(**netG_enc_config)
+        self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config)
+        self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config)
+        self.quantizer = VectorQuantizer(**quantizer_config)
+        self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim)
+        self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim)
         self.optimizer_config = optimizer_config
-        # # self.clip_grad = clip_grad
-        # # self.clip_max_norm = clip_max_norm
-        # # self.clip_norm_type = clip_norm_type
-        # self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-        #                                              output_nc=(64 * (2 ** 2)),
-        #                                              norm_type="group",
-        #                                              padding_type="reflect")
-        # self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        # netG_up_config.pop("class")
-        # self.netG_up = self.netG_up(**netG_up_config)
-        #
-        # self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
-        # self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv).to(self.device)
-        # self.quantize = EMAVectorQuantizer(
-        #     emb_dim,
-        #     num_embeddings,
-        #     beta=beta
-        # ).to(self.device)
-        # self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        # self.decoder = nn.Sequential(self.post_quant_conv, self.netG_up).to(self.device)
-        self.netG = VQVAE(netG_up_config).to(self.device)
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:
-            # self.encoder.apply(weights_init)
-            # self.quantize.apply(weights_init)
-            # self.decoder.apply(weights_init)
-            self.netG.apply(weights_init)
+            self.encoder.apply(weights_init)
+            self.decoder.apply(weights_init)
+            self.pre_quant.apply(weights_init)
+            self.post_quant.apply(weights_init)
             self.netD.apply(weights_init)
 
-            # Wrap DDP
-        # self.encoder = DDPHelper.shell_ddp(self.encoder)
-        # self.quantize = DDPHelper.shell_ddp(self.quantize)
-        # self.decoder = DDPHelper.shell_ddp(self.decoder)
-        self.netG = DDPHelper.shell_ddp(self.netG)
+        # Wrap DDP
+        self.encoder = DDPHelper.shell_ddp(self.encoder)
+        self.decoder = DDPHelper.shell_ddp(self.decoder)
+        self.pre_quant = DDPHelper.shell_ddp(self.pre_quant)
+        self.post_quant = DDPHelper.shell_ddp(self.post_quant)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
@@ -112,15 +96,55 @@ class VQBMDModel(TrainingModelInt):
         self.MAX_VAL_DXA_DRR_315 = 40398.234376
         self.THRESHOLD_DXA_BMD_315 = 1591.5
 
+    def forward(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        quant, diff = self.encode(x)
+        dec = self.decode(quant)
+
+        return dec, diff
+
+    def encode(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        h = self.encoder(x)
+        h = self.pre_quant(h)
+        quant, emb_loss, _ = self.quantizer(h)
+
+        return quant, emb_loss
+
+    def decode(self, quant: torch.FloatTensor) -> torch.FloatTensor:
+        quant = self.post_quant(quant)
+        dec = self.decoder(quant)
+
+        return dec
+
+    def encode_codes(self, x: torch.FloatTensor) -> torch.LongTensor:
+        h = self.encoder(x)
+        h = self.pre_quant(h)
+        _, _, codes = self.quantizer(h)
+
+        return codes
+
+    def decode_codes(self, code: torch.LongTensor) -> torch.FloatTensor:
+        quant = self.quantizer.embedding(code)
+        quant = self.quantizer.norm(quant)
+
+        if self.quantizer.use_residual:
+            quant = quant.sum(-2)
+
+        dec = self.decode(quant)
+
+        return dec
+
+
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        # self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-        #                                                 self.decoder.module.parameters()),
-        #                                 **self.optimizer_config)
-        self.netG_optimizer = optimizer(self.netG.module.parameters(),
+        self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
+                                                        self.pre_quant.module.parameters(),
+                                                        self.quantizer.parameters(),
+                                                        self.post_quant.module.parameters(),
+                                                        self.decoder.module.parameters()),
                                         **self.optimizer_config)
+
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
         self.netD_optimizer = optimizer(self.netD.module.parameters(),
@@ -133,7 +157,7 @@ class VQBMDModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr, _ = self.netG(xp)
+        fake_drr, _ = self.forward(xp)
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
@@ -142,8 +166,8 @@ class VQBMDModel(TrainingModelInt):
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
 
-        content_fake, vq_fake, _ = self.netG.module.encode(xp)
-        content_gt, vq_gt, _ = self.netG.module.encode(drr)
+        content_fake, vq_fake = self.encode(xp)
+        content_gt, vq_gt = self.encode(drr)
         vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
                   torch.abs(content_gt - content_fake).mean() * 0.5
         log["G_VQ"] = vq_loss.detach()
@@ -212,7 +236,7 @@ class VQBMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            fake_drrs, _ = self.netG(xps)
+            fake_drrs, _ = self.forward(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -270,8 +294,8 @@ class VQBMDModel(TrainingModelInt):
         if resume:
             assert strict == True
 
-        # for signature in ["encoder", "quantize", "decoder", "netD"]:
-        for signature in ["netG", "netD"]:
+        for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
+        # for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
@@ -280,7 +304,7 @@ class VQBMDModel(TrainingModelInt):
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["netG", "netD"]:
+        for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
             torch.save(net.module.state_dict(), save_path)
@@ -288,11 +312,11 @@ class VQBMDModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["netG", "netD"]:
+            for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["netG", "netD"]:
+            for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
 
@@ -316,7 +340,6 @@ class VQBMDModel(TrainingModelInt):
         return numerator / area
 
 
-# Not Completed
 class VQBMDModelInference(InferenceModelInt):
 
     def __init__(self,

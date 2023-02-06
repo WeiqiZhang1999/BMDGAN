@@ -9,6 +9,7 @@ from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
 import numpy as np
 import pandas as pd
+import torch
 from Utils.ImageHelper import ImageHelper
 from ImageTransformer.ImageTransformer import ImageTransformer, IdentityTransformer
 from MultiProcessingHelper import MultiProcessingHelper
@@ -120,7 +121,7 @@ class LumbarInferenceDataset(Dataset):
         return self.__getitem__(idx)
 
     def __getitem__(self, idx):
-
+        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_dao, drr_dao = self.xp_pool[idx], self.drr_pool[idx]
         if self.preload:
             xp, drr = xp_dao.image_data.copy(), drr_dao.image_data.copy()
@@ -130,7 +131,8 @@ class LumbarInferenceDataset(Dataset):
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
-        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name}
+        return {"xp": xp, "drr": drr, "spacing": spacing,
+                "case_name": case_name, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):
@@ -248,7 +250,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         return self.__getitem__(idx)
 
     def __getitem__(self, idx):
-
+        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_dao, drr_dao = self.xp_pool[idx], self.drr_pool[idx]
         if self.preload:
             xp, drr = xp_dao.image_data.copy(), drr_dao.image_data.copy()
@@ -258,7 +260,8 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
-        return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name}
+        return {"xp": xp, "drr": drr, "spacing": spacing,
+                "case_name": case_name, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

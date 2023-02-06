@@ -56,7 +56,8 @@ class LumbarInferenceDataset(Dataset):
             self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_uncalibrated_LAT_ensembles")
 
         self.bmd_df_root = OSHelper.path_join(self.data_root, "Spine_data_for_AI_celan_20230119.xlsx")
-        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=[0, 1])
+        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
+        self.bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
 
         self.xp_pool = []
         self.drr_pool = []
@@ -183,7 +184,8 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_binary_mask_LAT_ensembles")
 
         self.bmd_df_root = OSHelper.path_join(self.data_root, "Spine_data_for_AI_celan_20230119.xlsx")
-        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=[0, 1])
+        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
+        self.bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
 
         self.xp_pool = []
         self.drr_pool = []

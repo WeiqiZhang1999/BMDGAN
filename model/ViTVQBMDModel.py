@@ -169,8 +169,9 @@ class ViTVQBMDModel(TrainingModelInt):
 
         content_fake, vq_fake = self.encode(xp)
         content_gt, vq_gt = self.encode(drr)
-        vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
-                  torch.abs(content_gt - content_fake).mean() * 0.5
+        # vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
+        #           torch.abs(content_gt - content_fake).mean() * 0.5
+        vq_loss = torch.abs(vq_gt - vq_fake).mean()
         log["G_VQ"] = vq_loss.detach()
         G_loss = G_loss + vq_loss * self.lambda_VQ
 

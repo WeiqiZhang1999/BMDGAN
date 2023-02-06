@@ -283,6 +283,8 @@ class BMDModel(TrainingModelInt):
         area = mask.sum()
         if area <= 0.:
             if isinstance(image, torch.Tensor):
+                print(image.dtype)
+                print(image.device)
                 return torch.Tensor(0, dtype=image.dtype, device=image.device)
             return 0.
         numerator = (image * mask).sum()

@@ -312,11 +312,11 @@ class ViTVQBMDModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
+            for signature in ["encoder", "decoder", "pre_quant", "post_quant", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
+            for signature in ["encoder", "decoder", "pre_quant", "post_quant", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
 

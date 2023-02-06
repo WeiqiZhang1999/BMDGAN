@@ -169,7 +169,7 @@ class ViTEncoder(nn.Module):
         image_height, image_width = image_size if isinstance(image_size, tuple) \
                                     else (image_size, image_size // 2)
         patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
-                                    else (patch_size, patch_size // 2)
+                                    else (patch_size, patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
         en_pos_embedding = get_2d_sincos_pos_embed(dim, (image_height // patch_height, image_width // patch_width))
@@ -203,7 +203,7 @@ class ViTDecoder(nn.Module):
         image_height, image_width = image_size if isinstance(image_size, tuple) \
                                     else (image_size, image_size // 2)
         patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
-                                    else (patch_size, patch_size // 2)
+                                    else (patch_size, patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
         de_pos_embedding = get_2d_sincos_pos_embed(dim, (image_height // patch_height, image_width // patch_width))

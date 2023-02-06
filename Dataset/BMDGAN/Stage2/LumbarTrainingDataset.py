@@ -55,7 +55,7 @@ class LumbarTrainingDataset(Dataset):
         self.drr_pool = []
         for case_name in training_case_names:
             xp_suffix = f"_{self.view}.mhd"
-            drr_suffix = f"_{self.view}_Ensembles.mhd"
+            drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
 
             xp_case_name = case_name + xp_suffix
             drr_case_name = case_name + drr_suffix
@@ -194,7 +194,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         self.drr_pool = []
         for case_name in training_case_names:
             xp_suffix = f"_{self.view}.mhd"
-            drr_suffix = f"_{self.view}_Ensembles.mhd"
+            drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
 
             xp_case_name = case_name + xp_suffix
             drr_case_name = case_name + drr_suffix

@@ -340,6 +340,7 @@ class ViTVQBMDModel(TrainingModelInt):
         return numerator / area
 
 
+# Not Completed
 class VQBMDModelInference(InferenceModelInt):
 
     def __init__(self,

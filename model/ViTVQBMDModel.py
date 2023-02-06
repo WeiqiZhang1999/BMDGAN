@@ -57,11 +57,11 @@ class ViTVQBMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
 
         # Prepare models
-        self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config)
-        self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config)
-        self.quantizer = VectorQuantizer(**quantizer_config)
-        self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim)
-        self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim)
+        self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config).to(self.device)
+        self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config).to(self.device)
+        self.quantizer = VectorQuantizer(**quantizer_config).to(self.device)
+        self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim).to(self.device)
+        self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim).to(self.device)
         self.optimizer_config = optimizer_config
 
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)

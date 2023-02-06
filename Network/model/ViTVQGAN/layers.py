@@ -167,7 +167,7 @@ class ViTEncoder(nn.Module):
                                     else (patch_size, patch_size)
 
         # assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
-        assert image_height % patch_height == 0 and image_width % patch_width == 0, f'{image_height}, {image_width}'
+        assert image_height % patch_height == 0 and image_width % patch_width == 0, image_height
         en_pos_embedding = get_2d_sincos_pos_embed(dim, (image_height // patch_height, image_width // patch_width))
 
         self.num_patches = (image_height // patch_height) * (image_width // patch_width)

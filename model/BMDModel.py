@@ -344,6 +344,58 @@ class BMDModelInference(InferenceModelInt):
                                       compress=True)
 
 
+class LumbarBMDModelInference(InferenceModelInt):
+
+    def __init__(self,
+                 netG_enc_config,
+                 netG_up_config):
+        self.rank = DDPHelper.rank()
+        self.local_rank = DDPHelper.local_rank()
+        self.device = torch.device(self.local_rank)
+
+        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                     output_nc=(64 * (2 ** 2)),
+                                                     norm_type="group",
+                                                     padding_type="reflect").to(self.device)
+        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+        netG_up_config.pop("class")
+        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+
+    def load_model(self, load_dir: AnyStr, prefix="ckp"):
+        for signature in ["netG_up", "netG_fus", "netG_enc"]:
+            net = getattr(self, signature)
+            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+            TorchHelper.load_network_by_path(net, load_path, strict=True)
+            logging.info(f"Model {signature} loaded from {load_path}")
+
+    @torch.no_grad()
+    def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):
+        assert data_module.inference_dataloader is not None
+        iterator = data_module.inference_dataloader
+        if self.rank == 0:
+            iterator = tqdm(data_module.inference_dataloader,
+                            total=len(data_module.inference_dataloader),
+                            mininterval=60, maxinterval=180,)
+
+        for data in iterator:
+            xps = data["xp"].to(self.device)
+            spaces = data["spacing"].numpy()
+            case_names = data["case_name"]
+            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
+
+            B = xps.shape[0]
+            for i in range(B):
+                fake_drr = fake_drrs[i]  # (1, H, W)
+                case_name = case_names[i]
+                space = spaces[i]
+                save_dir = OSHelper.path_join(output_dir, "fake_drr")
+                OSHelper.mkdirs(save_dir)
+                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
+                                      fake_drr,
+                                      space,
+                                      compress=True)
+
 def weights_init(m):
     classname = m.__class__.__name__
     if isinstance(m, nn.Conv2d):

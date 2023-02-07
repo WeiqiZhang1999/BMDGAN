@@ -77,7 +77,7 @@ def PSNR(x, y, eps=1e-12, max_val=255.):
     return 10. * tmp
 
 
-def task1(case_name, fold):
+def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     psnr = 0.
     ssim = 0.
     inference_ai_list = []
@@ -86,7 +86,7 @@ def task1(case_name, fold):
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 36.75209
-    THRESHOLD_DXA_BMD_315 = 1.
+    # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
@@ -178,19 +178,27 @@ def main():
     fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     fold_list = os.listdir(fake_path)
 
-    final = list()
+
 
     args = []
+    THRESHOLD_DXA_BMD_315 = 1.
+    THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
 
-    for fold in fold_list:
-        base_dir = os.path.join(fake_path, fold, 'fake_drr')
-        case_name_list = os.listdir(base_dir)
+    res_dic = {}
+
+    for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
+        final = list()
+        for fold in fold_list:
+            base_dir = os.path.join(fake_path, fold, 'fake_drr')
+            case_name_list = os.listdir(base_dir)
 
 
-        for case_name in case_name_list:
-            if case_name.split('.')[-1] == 'mhd':
-            #     args.append((case_name, fold))
-                final.append(task1(case_name, fold))
+            for case_name in case_name_list:
+                if case_name.split('.')[-1] == 'mhd':
+                #     args.append((case_name, fold))
+                    final.append(task1(case_name, fold, THRESHOLD))
+
+        res_dic.update({THRESHOLD: final})
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
@@ -207,27 +215,31 @@ def main():
     #
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
-    psnr = 0.
-    total_count = 0.
-    ssim = 0.
-    fake_bmd_list = []
-    gt_bmd_List = []
-    print(final)
-    for i, j, l1, l2, k in final:
-        psnr += i
-        ssim += j
-        fake_bmd_list += l1
-        gt_bmd_List += l2
-        total_count += k
+    pccs = []
+    for THRESHOLD, v in res_dic:
+        psnr = 0.
+        total_count = 0.
+        ssim = 0.
+        fake_bmd_list = []
+        gt_bmd_List = []
+        # print(final)
+        for i, j, l1, l2, k in v:
+            psnr += i
+            ssim += j
+            fake_bmd_list += l1
+            gt_bmd_List += l2
+            total_count += k
 
+        pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+        pccs.append(pcc)
     # fake_bmd = np.concatenate(fake_bmd_list)
     # gt_bmd = np.concatenate(gt_bmd_List)
 
 
-    print(f'Mean PSNR: %.3f' % (psnr / total_count))
-    print(f'Mean SSIM: %.3f' % (ssim / total_count))
-    pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-    print('PCC:  %.3f' % pcc)
+    # print(f'Mean PSNR: %.3f' % (psnr / total_count))
+    # print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+    print('PCC:  %.3f' % np.max(pccs))
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

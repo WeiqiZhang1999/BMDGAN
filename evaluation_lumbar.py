@@ -119,7 +119,7 @@ def task1(case_name, fold):
                                   data_range=255.0, multichannel=True)
     total_count += 1
 
-    return psnr, ssim, inference_ai_list, gt_bmds, total_count
+    return [psnr, ssim, inference_ai_list, gt_bmds, total_count]
 
 def task2(case_name, fold):
     psnr = 0.

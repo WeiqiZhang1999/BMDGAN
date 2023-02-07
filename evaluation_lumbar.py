@@ -94,9 +94,10 @@ def task1(case_name, fold):
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
 
+    df_case_name = case_name.split('.')[0]
 
-    fake_drr_path = os.path.join(fake_path, f'{case_name}.mhd')
-    gt_drr_path = os.path.join(gt_path, f'DRR_{case_name}_AP_Ensembles.mhd')
+    fake_drr_path = os.path.join(fake_path, f'{df_case_name}.mhd')
+    gt_drr_path = os.path.join(gt_path, f'DRR_{df_case_name}_AP_Ensembles.mhd')
 
     fake_drr, _ = MetaImageHelper.read(fake_drr_path)
     gt_drr, _ = load_image(gt_drr_path, [512, 256])
@@ -111,7 +112,7 @@ def task1(case_name, fold):
     inference_ai_list.append(
         calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
 
-    gt_bmds.append(bmd_df.loc[case_name, 'DXABMD'])
+    gt_bmds.append(bmd_df.loc[df_case_name, 'DXABMD'])
 
     psnr += PSNR(fake_drr_normal, gt_drr_normal)
     ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),

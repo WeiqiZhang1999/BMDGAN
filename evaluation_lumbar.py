@@ -141,7 +141,7 @@ def task2(case_name, fold):
     MIN_VAL_DXA_MASK_DRR_315 = 0.
     MAX_VAL_DXA_MASK_DRR_315 = 89.91797
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
-    gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles'
+    gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     mask_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_mask_e630/output'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'

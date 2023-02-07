@@ -231,7 +231,7 @@ class BMDFormerModel(TrainingModelInt):
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC(AVG)"] = pcc
+            ret["BMD_PCC_AVG"] = pcc
         return ret
 
     @torch.no_grad()

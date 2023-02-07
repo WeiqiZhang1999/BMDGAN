@@ -39,6 +39,13 @@ def load_image(load_path, load_size):
     return img.astype(np.float32), spacing
 
 
+def calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask:  np.ndarray | torch.Tensor
+                                     )-> float | np.ndarray | torch.Tensor:
+    area = mask.sum()
+    numerator = (image * mask).sum()
+    return numerator / area
+
+
 def calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
                                     threshold: int | float) -> float | np.ndarray | torch.Tensor:
     mask = image >= threshold
@@ -130,20 +137,27 @@ def task2(case_name, fold):
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 36.75209
-    THRESHOLD_DXA_BMD_315 = 1.
+
+    MIN_VAL_DXA_MASK_DRR_315 = 0.
+    MAX_VAL_DXA_MASK_DRR_315 = 89.91797
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles'
+    mask_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_mask_e630/output'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
+    mask_drr_path = os.path.join(mask_path, fold, 'fake_drr')
 
+    df_case_name = case_name.split('.')[0]
 
-    fake_drr_path = os.path.join(fake_path, f'{case_name}.mhd')
-    gt_drr_path = os.path.join(gt_path, f'DRR_{case_name}_AP_Ensembles.mhd')
+    fake_drr_path = os.path.join(fake_path, f'{df_case_name}.mhd')
+    mask_drr_root = os.path.join(mask_drr_path, f'{df_case_name}.mhd')
+    gt_drr_path = os.path.join(gt_path, f'DRR_{df_case_name}_AP_Ensembles.mhd')
 
     fake_drr, _ = MetaImageHelper.read(fake_drr_path)
+    mask_drr, _ = MetaImageHelper.read(mask_drr_root)
     gt_drr, _ = load_image(gt_drr_path, [512, 256])
 
     fake_drr_normal = denormal(fake_drr)
@@ -153,18 +167,21 @@ def task2(case_name, fold):
     fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
     fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
-    inference_ai_list.append(
-        calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
+    mask_drr_ = denormal(fake_drr, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
+    mask_drr_ = np.clip(mask_drr_, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
 
-    gt_bmds.append(bmd_df.loc[case_name, 'DXABMD'])
+
+    inference_ai_list.append(
+        calc_average_intensity_with_mask(fake_drr_, mask_drr_))
+
+    gt_bmds.append(bmd_df.loc[df_case_name, 'DXABMD'])
 
     psnr += PSNR(fake_drr_normal, gt_drr_normal)
     ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
                                   data_range=255.0, multichannel=True)
     total_count += 1
 
-    return psnr, ssim, inference_ai_list, gt_bmds, total_count
-
+    return [psnr, ssim, inference_ai_list, gt_bmds, total_count]
 
 def main():
     start = time()
@@ -178,12 +195,10 @@ def main():
     fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     fold_list = os.listdir(fake_path)
 
-
-
     args = []
     THRESHOLD_DXA_BMD_315 = 1.
-    THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
-
+    # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
+    THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
     res_dic = {}
 
     for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
@@ -199,6 +214,17 @@ def main():
                     final.append(task1(case_name, fold, THRESHOLD))
 
         res_dic.update({THRESHOLD: final})
+
+    final = list()
+    for fold in fold_list:
+        base_dir = os.path.join(fake_path, fold, 'fake_drr')
+        case_name_list = os.listdir(base_dir)
+
+
+        for case_name in case_name_list:
+            if case_name.split('.')[-1] == 'mhd':
+            #     args.append((case_name, fold))
+                final.append(task2(case_name, fold))
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
@@ -217,29 +243,44 @@ def main():
     #                                      mininterval=30, maxinterval=90)
     pccs = []
     for THRESHOLD, v in res_dic:
-        psnr = 0.
-        total_count = 0.
-        ssim = 0.
+        # psnr = 0.
+        # total_count = 0.
+        # ssim = 0.
         fake_bmd_list = []
         gt_bmd_List = []
         # print(final)
         for i, j, l1, l2, k in v:
-            psnr += i
-            ssim += j
+            # psnr += i
+            # ssim += j
             fake_bmd_list += l1
-            gt_bmd_List += l2
-            total_count += k
+            # gt_bmd_List += l2
+            # total_count += k
 
         pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
         pccs.append(pcc)
     # fake_bmd = np.concatenate(fake_bmd_list)
     # gt_bmd = np.concatenate(gt_bmd_List)
+    psnr = 0.
+    total_count = 0.
+    ssim = 0.
+    fake_bmd_list = []
+    gt_bmd_List = []
+    # print(final)
+    for i, j, l1, l2, k in final:
+        psnr += i
+        ssim += j
+        fake_bmd_list += l1
+        gt_bmd_List += l2
+        total_count += k
 
+    new_pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
 
-    # print(f'Mean PSNR: %.3f' % (psnr / total_count))
-    # print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    print(f'Mean PSNR: %.3f' % (psnr / total_count))
+    print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-    print('PCC:  %.3f' % np.max(pccs))
+    print('Conventional PCC:  %.3f' % np.max(pccs))
+
+    print('new PCC:  %.3f' % new_pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

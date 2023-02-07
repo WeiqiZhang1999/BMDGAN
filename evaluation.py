@@ -213,7 +213,7 @@ def main():
         for i, j, l1, l2, k in final:
             psnr += i
             ssim += j
-            fake_bmd_dict += l1
+            fake_bmd_dict += fake_bmd_dict.update(l1)
             gt_bmd_List += l2
             total_count += k
 

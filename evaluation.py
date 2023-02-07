@@ -81,12 +81,14 @@ def task2(case_name, fold):
     psnr = 0.
     ssim = 0.
     inference_ai_list = []
+    inference_ai_dict = {}
     gt_bmds = []
     total_count = 0.
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 40398.234376
-    THRESHOLD_DXA_BMD_315 = 1591.5
+    # THRESHOLD_DXA_BMD_315 = 1591.5
+    THRESHOLD_DXA_BMD_315_list = np.linspace(1000, 2000, 1000, dtype=np.float32)
     gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
@@ -112,8 +114,12 @@ def task2(case_name, fold):
             fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
             fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
-            inference_ai_list.append(
-                calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
+            for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
+                inference_ai_dict.update({THRESHOLD: calc_average_intensity_with_th(fake_drr_, THRESHOLD)})
+                # inference_ai_list.append(
+                #     calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
+
+
 
             gt_bmds.append(bmd_df.loc[case_name, 'DXABMD'])
 
@@ -122,7 +128,7 @@ def task2(case_name, fold):
                                           data_range=255.0, multichannel=True)
             total_count += 1
 
-    return psnr, ssim, inference_ai_list, gt_bmds, total_count
+    return psnr, ssim, inference_ai_dict, gt_bmds, total_count
 
 def task1(case_name, fold):
     psnr = 0.
@@ -162,7 +168,7 @@ def main():
     start = time()
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--stage", type=int, default=1)
+    parser.add_argument("--stage", type=int, default=2)
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
@@ -202,12 +208,12 @@ def main():
             ssim += j
             total_count += k
     else:
-        fake_bmd_list = []
+        fake_bmd_dict = {}
         gt_bmd_List = []
         for i, j, l1, l2, k in final:
             psnr += i
             ssim += j
-            fake_bmd_list += l1
+            fake_bmd_dict += l1
             gt_bmd_List += l2
             total_count += k
 
@@ -218,8 +224,12 @@ def main():
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
     if args_.stage == 2:
-        pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-        print('PCC:  %.3f' % pcc)
+        pccs = {}
+        for k, v in fake_bmd_dict:
+            pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+            pccs.update({k: pcc})
+        max_results = max(zip(pccs.values(), pccs.keys()))
+        print('PCC:  %.3f\nTHRESHOLD: %.4f ' % max_results[1], max_results[0])
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

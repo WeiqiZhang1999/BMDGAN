@@ -40,7 +40,7 @@ class LumbarTrainingDataset(Dataset):
             if aug_conf.lower() != "none":
                 self.transformer = ImageTransformer(**self.transformer_param_dict[aug_conf])
 
-        self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data2")
+        self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
         with open(OSHelper.path_join(self.data_root, r"jmid_lumbar_drr.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["train"]
 

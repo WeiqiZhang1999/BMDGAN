@@ -208,7 +208,7 @@ def main():
             ssim += j
             total_count += k
     else:
-        fake_bmd_dict = {}
+        fake_bmd_dict = dict()
         gt_bmd_List = []
         for i, j, l1, l2, k in final:
             psnr += i

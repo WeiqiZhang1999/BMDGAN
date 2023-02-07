@@ -201,6 +201,7 @@ def main():
     #                                      mininterval=30, maxinterval=90)
     psnr = 0.
     total_count = 0.
+
     ssim = 0.
     if args_.stage == 1:
         for i, j, k in final:
@@ -213,7 +214,7 @@ def main():
         for i, j, l1, l2, k in final:
             psnr += i
             ssim += j
-            fake_bmd_dict = fake_bmd_dict.update(l1)
+            fake_bmd_dict = dict(fake_bmd_dict.items() + l1.items())
             gt_bmd_List += l2
             total_count += k
 

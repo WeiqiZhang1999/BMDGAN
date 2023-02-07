@@ -67,7 +67,7 @@ class BMDModel(TrainingModelInt):
             self.netG_up = ImportHelper.get_class(netG_up_config["class"])
             netG_up_config.pop("class")
             self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-            self.netD = MultiscaleDiscriminator(input_nc=4).to(self.device)
+            self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
         else:
             self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
             self.optimizer_config = optimizer_config

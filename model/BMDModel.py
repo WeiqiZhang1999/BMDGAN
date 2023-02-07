@@ -39,7 +39,8 @@ class BMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  log_pcc=False,
-                 lumbar_data=True,
+                 lumbar_data=False,
+                 binary=False,
                  view='AP'
                  # clip_grad=False,
                  # clip_max_norm=0.01,
@@ -49,21 +50,38 @@ class BMDModel(TrainingModelInt):
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
+        self.lumbar_data = lumbar_data
+        self.binary = binary
 
         # Prepare models
-        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-        self.optimizer_config = optimizer_config
-        # self.clip_grad = clip_grad
-        # self.clip_max_norm = clip_max_norm
-        # self.clip_norm_type = clip_norm_type
-        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                     output_nc=(64 * (2 ** 2)),
-                                                     norm_type="group",
-                                                     padding_type="reflect").to(self.device)
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-        self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
+        if self.lumbar_data and self.binary:
+            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+            self.optimizer_config = optimizer_config
+            # self.clip_grad = clip_grad
+            # self.clip_max_norm = clip_max_norm
+            # self.clip_norm_type = clip_norm_type
+            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                         output_nc=(64 * (2 ** 2)),
+                                                         norm_type="group",
+                                                         padding_type="reflect").to(self.device)
+            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+            netG_up_config.pop("class")
+            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+            self.netD = MultiscaleDiscriminator(input_nc=4).to(self.device)
+        else:
+            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+            self.optimizer_config = optimizer_config
+            # self.clip_grad = clip_grad
+            # self.clip_max_norm = clip_max_norm
+            # self.clip_norm_type = clip_norm_type
+            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                         output_nc=(64 * (2 ** 2)),
+                                                         norm_type="group",
+                                                         padding_type="reflect").to(self.device)
+            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+            netG_up_config.pop("class")
+            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+            self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:
             self.netG_enc.apply(weights_init)
@@ -88,11 +106,11 @@ class BMDModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        if lumbar_data and view == 'AP':
+        if self.lumbar_data and view == 'AP':
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 36.74824
             self.THRESHOLD_DXA_BMD_315 = 0.05
-        elif lumbar_data and view == 'LAT':
+        elif self.lumbar_data and view == 'LAT':
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 36.75209
             self.THRESHOLD_DXA_BMD_315 = 0.05

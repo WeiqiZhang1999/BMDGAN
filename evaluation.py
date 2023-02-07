@@ -227,7 +227,7 @@ def main():
         # for k, v in fake_bmd_dict:
         pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
         #     pccs.append(pcc)
-        print('PCC:  %.3f\nTHRESHOLD: %.4f ' % pcc, )
+        print('PCC:  %.3f' % pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

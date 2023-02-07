@@ -87,8 +87,8 @@ class BMDModel(TrainingModelInt):
         self.log_bmd_pcc = log_pcc
 
         self.MIN_VAL_DXA_DRR_315 = 0.
-        self.MAX_VAL_DXA_DRR_315 = 40398.234376
-        self.THRESHOLD_DXA_BMD_315 = 1591.5
+        self.MAX_VAL_DXA_DRR_315 = 36.74824
+        self.THRESHOLD_DXA_BMD_315 = 0.05
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

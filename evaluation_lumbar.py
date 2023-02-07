@@ -242,6 +242,7 @@ def main():
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
     pccs = []
+    print(res_dic)
     for THRESHOLD, v in res_dic:
         # psnr = 0.
         # total_count = 0.

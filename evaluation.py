@@ -89,8 +89,8 @@ def task2(case_name, fold):
     MAX_VAL_DXA_DRR_315 = 40398.234376
     # THRESHOLD_DXA_BMD_315 = 1591.5
     THRESHOLD_DXA_BMD_315_list = np.linspace(1000, 2000, 1000, dtype=np.float32)
-    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
+    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=1)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
@@ -135,8 +135,8 @@ def task1(case_name, fold):
     ssim = 0.
     total_count = 0.
 
-    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
+    gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
     base_fake_dir = os.path.join(fake_path, case_name)
     base_gt_dir = os.path.join(gt_path, case_name)

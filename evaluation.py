@@ -87,7 +87,8 @@ def task2(case_name, fold):
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 40398.234376
-    THRESHOLD_DXA_BMD_315 = 1591.5
+    # THRESHOLD_DXA_BMD_315 = 1591.5
+    THRESHOLD_DXA_BMD_315 = 1500
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1000, 2000, 1000, dtype=np.float32)
     gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
@@ -223,7 +224,6 @@ def main():
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
     if args_.stage == 2:
-        pccs = []
         # for k, v in fake_bmd_dict:
         pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
         #     pccs.append(pcc)

@@ -161,9 +161,11 @@ class BMDModel(TrainingModelInt):
             G_loss += fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0. and self.binary:
-            print(drr.shape)
-            print(fake_drr.shape)
-            gc_loss_1 = self.crit_GC(drr[:, 0, :, :], fake_drr[:, 0, :, :])
+            drr0 = drr[:, 0, :, :]
+            fake_drr0 = fake_drr[:, 0, :, :]
+            print(drr0.shape)
+            print(drr0.shape)
+            gc_loss_1 = self.crit_GC(drr0, fake_drr0)
             gc_loss_2 = self.crit_GC(drr[:, 1, :, :], fake_drr[:, 1, :, :])
             gc_loss = gc_loss_1 + gc_loss_2
             log["G_GC"] = gc_loss.detach()

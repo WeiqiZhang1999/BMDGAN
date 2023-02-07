@@ -89,7 +89,7 @@ class BMDModel(TrainingModelInt):
             self.netG_up.apply(weights_init)
             self.netD.apply(weights_init)
 
-            # Wrap DDP
+        # Wrap DDP
         self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
         self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
         self.netG_up = DDPHelper.shell_ddp(self.netG_up)
@@ -160,7 +160,13 @@ class BMDModel(TrainingModelInt):
             log["G_FM"] = fm_loss.detach()
             G_loss += fm_loss * self.lambda_FM
 
-        if self.lambda_GC > 0.:
+        if self.lambda_GC > 0. and self.binary:
+            gc_loss_1 = self.crit_GC(drr[0], fake_drr[0])
+            gc_loss_2 = self.crit_GC(drr[1], fake_drr[1])
+            gc_loss = gc_loss_1 + gc_loss_2
+            log["G_GC"] = gc_loss.detach()
+            G_loss += gc_loss * self.lambda_GC
+        else:
             gc_loss = self.crit_GC(drr, fake_drr)
             log["G_GC"] = gc_loss.detach()
             G_loss += gc_loss * self.lambda_GC

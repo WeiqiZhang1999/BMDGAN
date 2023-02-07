@@ -293,7 +293,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         mask = mask.astype(np.float32)
         mask = np.transpose(mask, (2, 0, 1))
 
-        drr_with_mask = np.concatenate((drr, mask), axis=1)
+        drr_with_mask = np.concatenate((drr, mask), axis=0)
 
         return {"xp": xp, "drr": drr_with_mask}
 

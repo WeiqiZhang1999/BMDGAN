@@ -273,7 +273,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             mask, _ = self._load_image(mask_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
-        drr_with_mask = np.concatenate((drr, mask), axis=1)
+        drr_with_mask = np.concatenate((drr, mask), axis=0)
 
         return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
                 "case_name": case_name, "DXABMD": dxa_bmd}

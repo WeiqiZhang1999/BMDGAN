@@ -196,35 +196,22 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 1.
+    THRESHOLD_DXA_BMD_315 = 0.1
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
-    THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
-    res_dic = {}
+    # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
-    for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
-        final = list()
-        for fold in fold_list:
-            base_dir = os.path.join(fake_path, fold, 'fake_drr')
-            case_name_list = os.listdir(base_dir)
-
-
-            for case_name in case_name_list:
-                if case_name.split('.')[-1] == 'mhd':
-                #     args.append((case_name, fold))
-                    final.append(task1(case_name, fold, THRESHOLD))
-
-        res_dic.update({str(THRESHOLD): final})
-
-    final = list()
+    final1 = list()
+    final2 = list()
     for fold in fold_list:
         base_dir = os.path.join(fake_path, fold, 'fake_drr')
         case_name_list = os.listdir(base_dir)
-
-
         for case_name in case_name_list:
             if case_name.split('.')[-1] == 'mhd':
             #     args.append((case_name, fold))
-                final.append(task2(case_name, fold))
+                final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
+                final2.append(task2(case_name, fold))
+
+
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
@@ -241,33 +228,25 @@ def main():
     #
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
-    pccs = []
-    print(res_dic)
-    for THRESHOLD, v in res_dic:
-        # psnr = 0.
-        # total_count = 0.
-        # ssim = 0.
-        fake_bmd_list = []
-        gt_bmd_List = []
-        # print(final)
-        for i, j, l1, l2, k in v:
-            # psnr += i
-            # ssim += j
-            fake_bmd_list += l1
-            # gt_bmd_List += l2
-            # total_count += k
+    fake_bmd_list1 = []
+    gt_bmd_List1 = []
+    # print(final)
+    for i, j, l1, l2, k in final1:
+        # psnr += i
+        # ssim += j
+        fake_bmd_list1 += l1
+        gt_bmd_List1 += l2
+        # total_count += k
 
-        pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-        pccs.append(pcc)
-    # fake_bmd = np.concatenate(fake_bmd_list)
-    # gt_bmd = np.concatenate(gt_bmd_List)
+    pcc = pearsonr(fake_bmd_list1, gt_bmd_List1)[0]
+
     psnr = 0.
     total_count = 0.
     ssim = 0.
     fake_bmd_list = []
     gt_bmd_List = []
     # print(final)
-    for i, j, l1, l2, k in final:
+    for i, j, l1, l2, k in final2:
         psnr += i
         ssim += j
         fake_bmd_list += l1
@@ -279,7 +258,7 @@ def main():
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-    print('Conventional PCC:  %.3f' % np.max(pccs))
+    print('Conventional PCC:  %.3f' % pcc)
 
     print('new PCC:  %.3f' % new_pcc)
     end = time()

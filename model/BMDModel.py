@@ -39,6 +39,8 @@ class BMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  log_pcc=False,
+                 lumbar_data=True,
+                 view='AP'
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0
@@ -86,9 +88,18 @@ class BMDModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        self.MIN_VAL_DXA_DRR_315 = 0.
-        self.MAX_VAL_DXA_DRR_315 = 36.74824
-        self.THRESHOLD_DXA_BMD_315 = 0.05
+        if lumbar_data and view == 'AP':
+            self.MIN_VAL_DXA_DRR_315 = 0.
+            self.MAX_VAL_DXA_DRR_315 = 36.74824
+            self.THRESHOLD_DXA_BMD_315 = 0.05
+        elif lumbar_data and view == 'LAT':
+            self.MIN_VAL_DXA_DRR_315 = 0.
+            self.MAX_VAL_DXA_DRR_315 = 36.75209
+            self.THRESHOLD_DXA_BMD_315 = 0.05
+        else:
+            self.MIN_VAL_DXA_DRR_315 = 0.
+            self.MAX_VAL_DXA_DRR_315 = 40398.234376
+            self.THRESHOLD_DXA_BMD_315 = 1591.5
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

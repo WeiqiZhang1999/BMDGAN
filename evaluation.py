@@ -88,7 +88,7 @@ def task2(case_name, fold):
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 40398.234376
     # THRESHOLD_DXA_BMD_315 = 1591.5
-    THRESHOLD_DXA_BMD_315_list = np.linspace(1000, 2000, 1000, dtype=np.float32)
+    THRESHOLD_DXA_BMD_315_list = np.linspace(1000, 2000, 1000, dtype=np.float32).tolist()
     gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/DXA_DRR_315'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
     bmd_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/data/case_info(newCTBMD).xlsx'
@@ -115,7 +115,7 @@ def task2(case_name, fold):
             fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
             for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
-                inference_ai_dict.update({THRESHOLD[0]: calc_average_intensity_with_th(fake_drr_, THRESHOLD[0])})
+                inference_ai_dict.update({THRESHOLD: calc_average_intensity_with_th(fake_drr_, THRESHOLD)})
                 # inference_ai_list.append(
                 #     calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
 

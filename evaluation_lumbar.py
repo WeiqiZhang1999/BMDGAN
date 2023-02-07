@@ -190,7 +190,7 @@ def main():
         for case_name in case_name_list:
             if case_name.split('.')[-1] == 'mhd':
             #     args.append((case_name, fold))
-                final += task1(case_name, fold)
+                final.append(task1(case_name, fold))
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",

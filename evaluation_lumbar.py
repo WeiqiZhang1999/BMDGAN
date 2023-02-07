@@ -183,7 +183,8 @@ def main():
         case_name_list = os.listdir(base_dir)
         args = []
         for case_name in case_name_list:
-            args.append((case_name, fold))
+            if case_name.split('.')[-1] == 'mhd':
+                args.append((case_name, fold))
 
         if args_.stage == 1:
             result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",

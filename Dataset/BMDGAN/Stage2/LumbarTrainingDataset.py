@@ -4,6 +4,7 @@
 # @Author  : ZHANG WEIQI
 # @File    : LumbarTrainingDataset.py
 # @Software: PyCharm
+import torch
 
 from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
@@ -185,22 +186,32 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':
             self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_AP")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               "20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                "20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles")
         else:
             self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_LAT")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_binary_mask_LAT_ensembles")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               "20230128_Lumbar_DRRs_perspective_uncalibrated_LAT_ensembles")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                "20230128_Lumbar_DRRs_perspective_binary_mask_LAT_ensembles")
 
         self.xp_pool = []
         self.drr_pool = []
+        self.mask_pool = []
         for case_name in training_case_names:
             xp_suffix = f"_{self.view}.mhd"
             drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
+            mask_suffix = drr_suffix
 
             xp_case_name = case_name + xp_suffix
             drr_case_name = drr_suffix
+            mask_case_name = mask_suffix
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
+            case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             # if not OSHelper.path_exists(case_xp_dir):
             #     continue
@@ -209,12 +220,14 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             #     assert OSHelper.path_exists(drr_path), drr_path
             self.xp_pool.append(case_xp_dir)
             self.drr_pool.append(case_drr_dir)
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0
+            self.mask_pool.append(case_mask_dir)
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.mask_pool) > 0
 
         if self.verbose:
             print("Trainig Datasets")
             print(f"Xp: {len(self.xp_pool)}")
             print(f"DRR: {len(self.drr_pool)}")
+            print(f"Mask: {len(self.mask_pool)}")
 
         if self.preload:
             args = []
@@ -229,21 +242,29 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             self.drr_pool = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                         desc="Loading DRR" if self.verbose else None,
                                                         mininterval=60, maxinterval=180)
+            args = []
+            for mask_path in self.mask_pool:
+                args.append((mask_path, self.load_size))
+            self.mask_pool = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
+                                                        desc="Loading Mask DRR" if self.verbose else None,
+                                                        mininterval=60, maxinterval=180)
 
     def __len__(self):
         return len(self.xp_pool)
 
     def __getitem__(self, idx):
-        xp_path, drr_path = self.xp_pool[idx], self.drr_pool[idx]
+        xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 
         if self.preload:
-            xp, drr = xp_path.copy(), drr_path.copy()
+            xp, drr, mask = xp_path.copy(), drr_path.copy(), mask_path.copy()
         else:
             xp = self._load_image(xp_path, self.load_size)
             drr = self._load_image(drr_path, self.load_size)
+            mask = self._load_image(mask_path, self.load_size)
 
         xp = xp.astype(np.float64)
         drr = drr.astype(np.float64)
+        mask = mask.astype(np.float64)
 
         transform_parameters = self.transformer.get_random_transform(img_shape=self.load_size)
         xp = self.transformer.apply_transform(x=xp, transform_parameters=transform_parameters)
@@ -252,6 +273,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         if "contrast" in transform_parameters:
             transform_parameters.pop("contrast")
         drr = self.transformer.apply_transform(x=drr, transform_parameters=transform_parameters)
+        mask = self.transformer.apply_transform(x=mask, transform_parameters=transform_parameters)
 
         xp = ImageHelper.resize(xp, self.image_size) / 255.
         xp = ImageHelper.standardize(xp, 0.5, 0.5)
@@ -265,7 +287,15 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         drr = drr.astype(np.float32)
         drr = np.transpose(drr, (2, 0, 1))
 
-        return {"xp": xp, "drr": drr}
+        mask = ImageHelper.resize(mask, self.image_size) / 255.
+        mask = ImageHelper.standardize(mask, 0.5, 0.5)
+        mask = np.clip(mask, -1., 1.)
+        mask = mask.astype(np.float32)
+        mask = np.transpose(mask, (2, 0, 1))
+
+        drr_with_mask = np.concatenate((drr, mask), axis=1)
+
+        return {"xp": xp, "drr": drr_with_mask}
 
     @staticmethod
     def _load_image(load_path, load_size):

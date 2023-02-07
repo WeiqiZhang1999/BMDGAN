@@ -174,10 +174,17 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':
             self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_AP")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               "20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                "20230128_Lumbar_DRRs_perspective_binary_mask_AP_ensembles")
         else:
             self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_LAT")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_DRRs_perspective_binary_mask_LAT_ensembles")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               "20230128_Lumbar_DRRs_perspective_uncalibrated_LAT_ensembles")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                "20230128_Lumbar_DRRs_perspective_binary_mask_LAT_ensembles")
+
 
         self.bmd_df_root = OSHelper.path_join(self.data_root, "Spine_data_for_AI_celan_20230119.xlsx")
         self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
@@ -186,29 +193,36 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         self.xp_pool = []
         self.drr_pool = []
         self.bmd_pool = []
+        self.mask_pool = []
         for case_name in training_case_names:
             xp_suffix = f"_{self.view}.mhd"
             drr_suffix = f"DRR_{case_name.split('_')[1]}_{case_name.split('_')[2]}_{self.view}_Ensembles.mhd"
+            mask_suffix = drr_suffix
 
             xp_case_name = case_name + xp_suffix
             drr_case_name = drr_suffix
+            mask_case_name = mask_suffix
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
+            case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             df_case_name = case_name.split('_')[1] + '_' + case_name.split('_')[2]
             self.bmd_pool.append(self.bmd_df.loc[df_case_name, 'DXABMD'])
 
             xp_dao = MetaImageDAO(df_case_name, image_path=case_xp_dir)
             drr_dao = MetaImageDAO(df_case_name, image_path=case_drr_dir)
+            mask_dao = MetaImageDAO(df_case_name, image_path=case_mask_dir)
             self.xp_pool.append(xp_dao)
             self.drr_pool.append(drr_dao)
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0
+            self.mask_pool.append(mask_dao)
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.mask_pool) > 0
 
         if self.verbose:
             print("Test Datasets")
             print(f"Xp: {len(self.xp_pool)}")
             print(f"DRR: {len(self.drr_pool)}")
+            print(f"Mask: {len(self.mask_pool)}")
 
         if self.preload:
             args = []
@@ -231,6 +245,16 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
                 drr_dao.image_data = drr
                 drr_dao.spacing = spacing
 
+            args = []
+            for mask_dao in self.mask_pool:
+                args.append((mask_dao.image_path, self.image_size))
+            masks = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
+                                               desc="Loading Mask DRR" if self.verbose else None,
+                                               mininterval=60, maxinterval=180)
+            for mask_dao, (mask, spacing) in zip(self.mask_pool, masks):
+                mask_dao.image_data = mask
+                mask_dao.spacing = spacing
+
     def __len__(self):
         return len(self.xp_pool)
 
@@ -239,16 +263,19 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
 
     def __getitem__(self, idx):
         dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
-        xp_dao, drr_dao = self.xp_pool[idx], self.drr_pool[idx]
+        xp_dao, drr_dao, mask_dao = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
         if self.preload:
-            xp, drr = xp_dao.image_data.copy(), drr_dao.image_data.copy()
+            xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
             spacing = xp_dao.spacing.copy()
         else:
             xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
+            mask, _ = self._load_image(mask_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
-        return {"xp": xp, "drr": drr, "spacing": spacing,
+        drr_with_mask = np.concatenate((drr, mask), axis=1)
+
+        return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
                 "case_name": case_name, "DXABMD": dxa_bmd}
 
     @staticmethod

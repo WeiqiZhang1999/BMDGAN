@@ -173,7 +173,7 @@ def main():
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     # fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_stage1_e630_decoder/output'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e310/output'
     fold_list = os.listdir(fake_path)
 
     final = list()

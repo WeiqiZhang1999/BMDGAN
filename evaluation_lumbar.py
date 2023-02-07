@@ -179,21 +179,26 @@ def main():
     fold_list = os.listdir(fake_path)
 
     final = list()
+
+    args = []
+
     for fold in fold_list:
         base_dir = os.path.join(fake_path, fold, 'fake_drr')
         case_name_list = os.listdir(base_dir)
-        args = []
+
+
         for case_name in case_name_list:
             if case_name.split('.')[-1] == 'mhd':
-                args.append((case_name, fold))
+            #     args.append((case_name, fold))
+                final += task1(case_name, fold)
 
-        if args_.stage == 1:
-            result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
-                                                 mininterval=30, maxinterval=90)
-        else:
-            result = MultiProcessingHelper().run(args=args, func=task2, n_workers=args_.num_workers, desc="task",
-                                                 mininterval=30, maxinterval=90)
-        final += result
+        # if args_.stage == 1:
+        #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",
+        #                                          mininterval=30, maxinterval=90)
+        # else:
+        #     result = MultiProcessingHelper().run(args=args, func=task2, n_workers=args_.num_workers, desc="task",
+        #                                          mininterval=30, maxinterval=90)
+        # final += result
 
     # case_name_list = os.listdir(fake_path)
     # args = []

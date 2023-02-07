@@ -212,6 +212,7 @@ def main():
     ssim = 0.
     fake_bmd_list = []
     gt_bmd_List = []
+    print(final)
     for i, j, l1, l2, k in final:
         psnr += i
         ssim += j

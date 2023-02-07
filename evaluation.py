@@ -226,7 +226,7 @@ def main():
     if args_.stage == 2:
         pccs = {}
         for k, v in fake_bmd_dict:
-            pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+            pcc = pearsonr(v, gt_bmd_List)[0]
             pccs.update({k: pcc})
         max_results = max(zip(pccs.values(), pccs.keys()))
         print('PCC:  %.3f\nTHRESHOLD: %.4f ' % max_results[1], max_results[0])

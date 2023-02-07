@@ -213,7 +213,7 @@ def main():
                 #     args.append((case_name, fold))
                     final.append(task1(case_name, fold, THRESHOLD))
 
-        res_dic.update({THRESHOLD: final})
+        res_dic.update({str(THRESHOLD): final})
 
     final = list()
     for fold in fold_list:

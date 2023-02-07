@@ -115,7 +115,7 @@ def task2(case_name, fold):
             fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
             for THRESHOLD in THRESHOLD_DXA_BMD_315_list:
-                inference_ai_dict.update({THRESHOLD: calc_average_intensity_with_th(fake_drr_, THRESHOLD)})
+                inference_ai_dict.update({THRESHOLD[0]: calc_average_intensity_with_th(fake_drr_, THRESHOLD[0])})
                 # inference_ai_list.append(
                 #     calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
 

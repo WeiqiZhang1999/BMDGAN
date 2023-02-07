@@ -42,7 +42,7 @@ class LumbarInferenceDataset(Dataset):
         self.verbose = verbose
         self.view = view
 
-        self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
+        self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data2")
         with open(OSHelper.path_join(self.data_root, r"jmid_lumbar_drr.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["test"]
 

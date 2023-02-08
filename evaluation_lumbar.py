@@ -197,7 +197,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 0.00001
+    THRESHOLD_DXA_BMD_315 = 0
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
@@ -261,7 +261,7 @@ def main():
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
     print(f'Epoch: {args_.epoch}')
     print('Conventional PCC:  %.3f' % pcc)
-    print(f'Using Threshold:{THRESHOLD_DXA_BMD_315}')
+    print(f'Using Threshold: {THRESHOLD_DXA_BMD_315}')
 
     # print('new PCC:  %.3f' % new_pcc)
     end = time()

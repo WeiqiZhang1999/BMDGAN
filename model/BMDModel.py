@@ -274,10 +274,10 @@ class BMDModel(TrainingModelInt):
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         if self.binary:
-            drrs_ = drrs[:, 0, :, :].unsuqeeze(1)
-            masks = drrs[:, 1, :, :].unsuqeeze(1)
-            fake_drrs_ = fake_drrs[:, 0, :, :].unsuqeeze(1)
-            fkae_masks = fake_drrs[:, 1, :, :].unsuqeeze(1)
+            drrs_ = drrs[:, 0, :, :].unsqueeze(1)
+            masks = drrs[:, 1, :, :].unsqueeze(1)
+            fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
+            fkae_masks = fake_drrs[:, 1, :, :].unsqueeze(1)
 
             ret = {"Xray": xps,
                    "DRR": drrs_,

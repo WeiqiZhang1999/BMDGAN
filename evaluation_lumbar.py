@@ -95,7 +95,7 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     MAX_VAL_DXA_DRR_315 = 36.74824
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e1270/output'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -188,7 +188,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--stage", type=int, default=1)
-    parser.add_argument("--epoch", type=int, default=1270)
+    parser.add_argument("--epoch", type=int, default=630)
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'

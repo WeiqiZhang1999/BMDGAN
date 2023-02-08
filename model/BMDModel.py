@@ -277,13 +277,14 @@ class BMDModel(TrainingModelInt):
             drrs_ = drrs[:, 0, :, :].unsqueeze(1)
             masks = drrs[:, 1, :, :].unsqueeze(1)
             fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
-            fkae_masks = fake_drrs[:, 1, :, :].unsqueeze(1)
+            fake_masks = fake_drrs[:, 1, :, :].unsqueeze(1)
 
             ret = {"Xray": xps,
                    "DRR": drrs_,
                    "Mask DRR": masks,
-                   "Fake_Mask": fkae_masks,
-                   "Fake_DRR": fake_drrs_}
+                   "Fake DRR": fake_drrs_,
+                   "Fake Mask": fake_masks,
+                   }
         else:
             ret = {"Xray": xps,
                    "DRR": drrs,
@@ -374,7 +375,7 @@ class BMDModelInference(InferenceModelInt):
         if self.rank == 0:
             iterator = tqdm(data_module.inference_dataloader,
                             total=len(data_module.inference_dataloader),
-                            mininterval=60, maxinterval=180,)
+                            mininterval=60, maxinterval=180, )
 
         for data in iterator:
             xps = data["xp"].to(self.device)
@@ -429,7 +430,7 @@ class LumbarBMDModelInference(InferenceModelInt):
         if self.rank == 0:
             iterator = tqdm(data_module.inference_dataloader,
                             total=len(data_module.inference_dataloader),
-                            mininterval=60, maxinterval=180,)
+                            mininterval=60, maxinterval=180, )
 
         for data in iterator:
             xps = data["xp"].to(self.device)
@@ -448,6 +449,7 @@ class LumbarBMDModelInference(InferenceModelInt):
                                       fake_drr,
                                       space,
                                       compress=True)
+
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -478,4 +480,3 @@ def calculate_FM_loss(pred_fake: torch.Tensor,
             loss_G_FM = loss_G_FM + D_weights * feat_weights * torch.mean(
                 torch.abs(pred_fake[i][j] - pred_real[i][j].detach()))
     return loss_G_FM
-

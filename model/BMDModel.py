@@ -440,9 +440,9 @@ class LumbarBMDModelInference(InferenceModelInt):
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
             if self.binary:
-                fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
-            else:
                 fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu()
+            else:
+                fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
 
             B = xps.shape[0]
             if self.binary:

@@ -80,11 +80,12 @@ class TrainingModel(BaseExperiment):
             assert DDPHelper.is_initialized()
 
 
-        rank = DDPHelper.rank()
-        local_rank = DDPHelper.local_rank()
+            rank = DDPHelper.rank()
+            local_rank = DDPHelper.local_rank()
 
-        print(f"host: {DDPHelper.hostname()}, rank: {rank}/{DDPHelper.world_size() - 1}, local_rank: {local_rank}")
-
+            print(f"host: {DDPHelper.hostname()}, rank: {rank}/{DDPHelper.world_size() - 1}, local_rank: {local_rank}")
+        else:
+            rank = 0
         ConfigureHelper.set_seed(self._seed + rank)
         logging.basicConfig(level=logging.INFO if rank == 0 else logging.WARN)
 

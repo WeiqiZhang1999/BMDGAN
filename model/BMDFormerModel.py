@@ -101,6 +101,13 @@ class BMDFormerModel(TrainingModelInt):
         self.MAX_VAL_DXA_DRR_315 = 40398.234376
         self.THRESHOLD_DXA_BMD_315 = 1591.5
 
+    def features_forword(self, x):
+        x = self.netG_fus(self.netG_enc(x))
+        x = self.transformer(x) + x
+        x = self.netG_up(x)
+        return x
+
+
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
@@ -122,7 +129,8 @@ class BMDFormerModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xp))))
+        # fake_drr = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xp))))
+        fake_drr = self.features_forword(xp)
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
@@ -195,7 +203,8 @@ class BMDFormerModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps))))
+            # fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps))))
+            fake_drrs = self.features_forword(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -238,7 +247,8 @@ class BMDFormerModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps))))
+        # fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps))))
+        fake_drrs = self.features_forword(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         ret = {"Xray": xps,
                "DRR": drrs,
@@ -323,6 +333,12 @@ class BMDFormerModelInference(InferenceModelInt):
             TorchHelper.load_network_by_path(net, load_path, strict=True)
             logging.info(f"Model {signature} loaded from {load_path}")
 
+    def features_forword(self, x):
+        x = self.netG_fus(self.netG_enc(x))
+        x = self.transformer(x) + x
+        x = self.netG_up(x)
+        return x
+
     @torch.no_grad()
     def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):
         assert data_module.inference_dataloader is not None
@@ -337,7 +353,8 @@ class BMDFormerModelInference(InferenceModelInt):
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
             slice_ids = data["slice_id"]
-            fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps)))).cpu().numpy()
+            # fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps)))).cpu().numpy()
+            fake_drrs = self.features_forword(xps).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):

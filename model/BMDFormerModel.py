@@ -75,7 +75,7 @@ class BMDFormerModel(TrainingModelInt):
         if self.rank == 0:
             self.netG_enc.apply(weights_init)
             self.netG_fus.apply(weights_init)
-            self.transformer.apply(weights_init)
+            # self.transformer.apply(weights_init)
             self.netG_up.apply(weights_init)
             self.netD.apply(weights_init)
 

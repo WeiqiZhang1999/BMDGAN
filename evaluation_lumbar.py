@@ -259,6 +259,7 @@ def main():
     # print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
     print('Conventional PCC:  %.3f' % pcc)
+    print(f'Using Threshold:{THRESHOLD_DXA_BMD_315}')
 
     # print('new PCC:  %.3f' % new_pcc)
     end = time()

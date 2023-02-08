@@ -92,7 +92,7 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     total_count = 0.
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
-    MAX_VAL_DXA_DRR_315 = 36.75209
+    MAX_VAL_DXA_DRR_315 = 36.74824
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
@@ -196,7 +196,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 0.1
+    THRESHOLD_DXA_BMD_315 = 0.01
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
@@ -209,7 +209,7 @@ def main():
             if case_name.split('.')[-1] == 'mhd':
             #     args.append((case_name, fold))
                 final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
-                final2.append(task2(case_name, fold))
+                # final2.append(task2(case_name, fold))
 
 
 
@@ -240,27 +240,27 @@ def main():
 
     pcc = pearsonr(fake_bmd_list1, gt_bmd_List1)[0]
 
-    psnr = 0.
-    total_count = 0.
-    ssim = 0.
-    fake_bmd_list = []
-    gt_bmd_List = []
-    # print(final)
-    for i, j, l1, l2, k in final2:
-        psnr += i
-        ssim += j
-        fake_bmd_list += l1
-        gt_bmd_List += l2
-        total_count += k
+    # psnr = 0.
+    # total_count = 0.
+    # ssim = 0.
+    # fake_bmd_list = []
+    # gt_bmd_List = []
+    # # print(final)
+    # for i, j, l1, l2, k in final2:
+    #     psnr += i
+    #     ssim += j
+    #     fake_bmd_list += l1
+    #     gt_bmd_List += l2
+    #     total_count += k
+    #
+    # new_pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
 
-    new_pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
-
-    print(f'Mean PSNR: %.3f' % (psnr / total_count))
-    print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    # print(f'Mean PSNR: %.3f' % (psnr / total_count))
+    # print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
     print('Conventional PCC:  %.3f' % pcc)
 
-    print('new PCC:  %.3f' % new_pcc)
+    # print('new PCC:  %.3f' % new_pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

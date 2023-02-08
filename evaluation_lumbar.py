@@ -188,15 +188,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--stage", type=int, default=1)
+    parser.add_argument("--epoch", type=int, default=1270)
     args_ = parser.parse_args()
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     # fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e1270/output'
+    fake_path = f'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e{args_.epoch}/output'
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 0.00005
+    THRESHOLD_DXA_BMD_315 = 0.00001
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
@@ -258,6 +259,7 @@ def main():
     # print(f'Mean PSNR: %.3f' % (psnr / total_count))
     # print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+    print(f'Epoch: {args_.epoch}')
     print('Conventional PCC:  %.3f' % pcc)
     print(f'Using Threshold:{THRESHOLD_DXA_BMD_315}')
 

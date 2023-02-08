@@ -52,9 +52,9 @@ class BMDFormerModel(TrainingModelInt):
                  # clip_norm_type=2.0
                  ):
 
-        # self.rank = DDPHelper.rank()
-        # self.local_rank = DDPHelper.local_rank()
-        self.device = 'cuda'
+        self.rank = DDPHelper.rank()
+        self.local_rank = DDPHelper.local_rank()
+        self.device = torch.device(self.local_rank)
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -72,19 +72,19 @@ class BMDFormerModel(TrainingModelInt):
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
-        # if self.rank == 0:
-        #     self.netG_enc.apply(weights_init)
-        #     self.netG_fus.apply(weights_init)
-        #     self.transformer.apply(weights_init)
-        #     self.netG_up.apply(weights_init)
-        #     self.netD.apply(weights_init)
+        if self.rank == 0:
+            self.netG_enc.apply(weights_init)
+            self.netG_fus.apply(weights_init)
+            # self.transformer.apply(weights_init)
+            self.netG_up.apply(weights_init)
+            self.netD.apply(weights_init)
 
             # Wrap DDP
-        # self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
-        # self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
-        # self.netG_up = DDPHelper.shell_ddp(self.netG_up)
-        # self.transformer = DDPHelper.shell_ddp(self.transformer)
-        # self.netD = DDPHelper.shell_ddp(self.netD)
+        self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
+        self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
+        self.netG_up = DDPHelper.shell_ddp(self.netG_up)
+        self.transformer = DDPHelper.shell_ddp(self.transformer)
+        self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
@@ -105,21 +105,14 @@ class BMDFormerModel(TrainingModelInt):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        # self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.module.parameters(),
-        #                                                 self.netG_fus.module.parameters(),
-        #                                                 self.transformer.module.parameters(),
-        #                                                 self.netG_up.module.parameters()),
-        #                                 **self.optimizer_config)
-        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.parameters(),
-                                                        self.netG_fus.parameters(),
-                                                        self.transformer.parameters(),
-                                                        self.netG_up.parameters()),
+        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.module.parameters(),
+                                                        self.netG_fus.module.parameters(),
+                                                        self.transformer.module.parameters(),
+                                                        self.netG_up.module.parameters()),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
-        # self.netD_optimizer = optimizer(self.netD.module.parameters(),
-        #                                 **self.optimizer_config)
-        self.netD_optimizer = optimizer(self.netD.parameters(),
+        self.netD_optimizer = optimizer(self.netD.module.parameters(),
                                         **self.optimizer_config)
         self.netD_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer, self.netD_optimizer]
@@ -134,7 +127,7 @@ class BMDFormerModel(TrainingModelInt):
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
-        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.num_D
+        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss.detach()
         G_loss += g_loss * self.lambda_GAN
 
@@ -145,8 +138,8 @@ class BMDFormerModel(TrainingModelInt):
 
         if self.lambda_FM > 0.:
             fm_loss = calculate_FM_loss(D_pred_fake, D_pred_real,
-                                        self.netD.n_layer,
-                                        self.netD.num_D)
+                                        self.netD.module.n_layer,
+                                        self.netD.module.num_D)
             log["G_FM"] = fm_loss.detach()
             G_loss += fm_loss * self.lambda_FM
 
@@ -157,8 +150,8 @@ class BMDFormerModel(TrainingModelInt):
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
-        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.num_D
-        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.num_D
+        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.module.num_D
+        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.module.num_D
         log["D_real"] = d_loss_real.detach()
         log["D_fake"] = d_loss_fake.detach()
         D_loss = D_loss + d_loss_real * 0.5 + d_loss_fake * 0.5
@@ -169,13 +162,13 @@ class BMDFormerModel(TrainingModelInt):
     def train_batch(self, data, batch_id, epoch):
         g_loss, d_loss, log = self.__compute_loss(data)
 
-        TorchHelper.set_requires_grad(self.netD, False)
+        TorchHelper.set_requires_grad(self.netD.module, False)
         self.netG_optimizer.zero_grad()
         self.netG_grad_scaler.scale(g_loss).backward()
         self.netG_grad_scaler.step(self.netG_optimizer)
         self.netG_grad_scaler.update()
 
-        TorchHelper.set_requires_grad(self.netD, True)
+        TorchHelper.set_requires_grad(self.netD.module, True)
         self.netD_optimizer.zero_grad()
         self.netD_grad_scaler.scale(d_loss).backward()
         self.netD_grad_scaler.step(self.netD_optimizer)
@@ -263,7 +256,7 @@ class BMDFormerModel(TrainingModelInt):
         for signature in ["netG_up", "netG_fus", "netG_enc", "transformer", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net, load_path, strict=strict)
+            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
             # print(f"Model {signature} loaded from {load_path}")
 
@@ -272,18 +265,18 @@ class BMDFormerModel(TrainingModelInt):
         for signature in ["netG_up", "netG_fus", "netG_enc", "transformer", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
-            torch.save(net.state_dict(), save_path)
+            torch.save(net.module.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):
         if train:
             for signature in ["netG_up", "netG_fus", "netG_enc", "transformer", "netD"]:
                 net = getattr(self, signature)
-                net.train()
+                net.module.train()
         else:
             for signature in ["netG_up", "netG_fus", "netG_enc", "transformer", "netD"]:
                 net = getattr(self, signature)
-                net.eval()
+                net.module.eval()
 
     def on_train_batch_end(self, *args, **kwargs):
         pass

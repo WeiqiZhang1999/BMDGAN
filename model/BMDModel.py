@@ -273,9 +273,21 @@ class BMDModel(TrainingModelInt):
         drrs = data["drr"].to(self.device)
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
-        ret = {"Xray": xps,
-               "DRR": drrs,
-               "Fake_DRR": fake_drrs}
+        if self.binary:
+            drrs_ = drrs[:, 0, :, :].unsuqeeze(1)
+            masks = drrs[:, 1, :, :].unsuqeeze(1)
+            fake_drrs_ = fake_drrs[:, 0, :, :].unsuqeeze(1)
+            fkae_masks = fake_drrs[:, 1, :, :].unsuqeeze(1)
+
+            ret = {"Xray": xps,
+                   "DRR": drrs_,
+                   "Mask DRR": masks,
+                   "Fake_Mask": fkae_masks,
+                   "Fake_DRR": fake_drrs_}
+        else:
+            ret = {"Xray": xps,
+                   "DRR": drrs,
+                   "Fake_DRR": fake_drrs}
         for key, val in ret.items():
             for i in range(val.shape[0]):
                 val[i] = ImageHelper.min_max_scale(val[i])

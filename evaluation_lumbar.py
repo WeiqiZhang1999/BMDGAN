@@ -197,7 +197,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 0
+    THRESHOLD_DXA_BMD_315 = 4e-5
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
@@ -229,15 +229,18 @@ def main():
     #
     # result = MultiProcessingHelper().run(args=args, func=task, n_workers=args_.num_workers, desc="task",
     #                                      mininterval=30, maxinterval=90)
+    psnr = 0.
+    total_count = 0.
+    ssim = 0.
     fake_bmd_list1 = []
     gt_bmd_List1 = []
     # print(final)
     for i, j, l1, l2, k in final1:
-        # psnr += i
-        # ssim += j
+        psnr += i
+        ssim += j
         fake_bmd_list1 += l1
         gt_bmd_List1 += l2
-        # total_count += k
+        total_count += k
 
     pcc = pearsonr(fake_bmd_list1, gt_bmd_List1)[0]
 
@@ -256,8 +259,8 @@ def main():
     #
     # new_pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
 
-    # print(f'Mean PSNR: %.3f' % (psnr / total_count))
-    # print(f'Mean SSIM: %.3f' % (ssim / total_count))
+    print(f'Mean PSNR: %.3f' % (psnr / total_count))
+    print(f'Mean SSIM: %.3f' % (ssim / total_count))
     # pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
     print(f'Epoch: {args_.epoch}')
     print('Conventional PCC:  %.3f' % pcc)

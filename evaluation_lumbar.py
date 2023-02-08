@@ -109,8 +109,8 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     fake_drr, _ = MetaImageHelper.read(fake_drr_path)
     gt_drr, _ = load_image(gt_drr_path, [512, 256])
 
-    # fake_drr_normal = denormal(fake_drr)
-    # gt_drr_normal = denormal(gt_drr)
+    fake_drr_normal = denormal(fake_drr)
+    gt_drr_normal = denormal(gt_drr)
 
     # PCC
     fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
@@ -197,7 +197,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 4e-5
+    THRESHOLD_DXA_BMD_315 = 3e-5
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 

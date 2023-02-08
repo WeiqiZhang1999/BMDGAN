@@ -95,7 +95,7 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     MAX_VAL_DXA_DRR_315 = 36.74824
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e1270/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -192,11 +192,11 @@ def main():
     print(f"Using {args_.num_workers} Cores for Multiprocessing")
     # gt_path = r'/win/salmon/user/zhangwq/deeplearning/bmd/pix2pix/dataset/Bone_DRR_LR_561'
     # fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/20230201_test/inference_e150/output/0/fake_drr'
-    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e630/output'
+    fake_path = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_e1270/output'
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 0.00001
+    THRESHOLD_DXA_BMD_315 = 0.0001
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 

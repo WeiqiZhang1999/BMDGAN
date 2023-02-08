@@ -66,7 +66,7 @@ class BMDFormerModel(TrainingModelInt):
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
-        self.transformer = TransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[64, 32]).to(self.device)
+        self.transformer = TransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
         self.netG_up = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)

@@ -212,7 +212,6 @@ class Transformer(nn.Module):
             x = ff(x) + x
         return x
 
-
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim):
         super().__init__()
@@ -253,3 +252,180 @@ class Attention(nn.Module):
         out = torch.matmul(attn, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
         return self.to_out(out)
+
+
+
+class FlowTransformerBlocks(nn.Module):
+
+    def __init__(self, img_size=64, patch_size=1, in_chans=1,
+                 embed_dim=96, depths=[6, 6, 6, 6], num_heads=[6, 6, 6, 6],
+                 window_size=8, mlp_ratio=2., qkv_bias=True, qk_scale=None,
+                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
+                 norm_layer=nn.LayerNorm, ape=True, patch_norm=True,
+                 **kwargs):
+        super(FlowTransformerBlocks, self).__init__()
+
+        self.num_layers = len(depths)
+        self.embed_dim = embed_dim
+        self.ape = ape
+        self.patch_norm = patch_norm
+        self.num_features = embed_dim
+        self.mlp_ratio = mlp_ratio
+
+        # split image into non-overlapping patches
+        self.patch_embed = PatchEmbed(
+            img_size=img_size, patch_size=patch_size, in_chans=embed_dim, embed_dim=embed_dim,
+            norm_layer=norm_layer if self.patch_norm else None)
+        num_patches = self.patch_embed.num_patches
+        patches_resolution = self.patch_embed.patches_resolution
+        self.patches_resolution = patches_resolution
+
+        # merge non-overlapping patches into image
+        self.patch_unembed = PatchUnEmbed(
+            img_size=img_size, patch_size=patch_size, in_chans=embed_dim, embed_dim=embed_dim,
+            norm_layer=norm_layer if self.patch_norm else None)
+
+        # absolute position embedding
+        if self.ape:
+            self.absolute_pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
+            trunc_normal_(self.absolute_pos_embed, std=.02)
+
+        self.pos_drop = nn.Dropout(p=drop_rate)
+
+        # stochastic depth
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
+
+        # build Residual Swin Transformer blocks (RSTB)
+        self.layers = nn.ModuleList()
+        for i_layer in range(self.num_layers):
+            # layer = Transformer(self.embed_dim,
+            #                     depths[i_layer],
+            #                     num_heads[i_layer],
+            #                     64,
+            #                     2048
+            #                     )
+            layer = My_BlockLayerScale(self.embed_dim, mlp_ratio=mlp_ratio, drop=drop_rate, drop_path=drop_path_rate)
+            self.layers.append(layer)
+        self.norm = norm_layer(self.num_features)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    @torch.jit.ignore
+    def no_weight_decay(self):
+        return {'absolute_pos_embed'}
+
+    @torch.jit.ignore
+    def no_weight_decay_keywords(self):
+        return {'relative_position_bias_table'}
+
+    def forward(self, x):
+        x_size = (x.shape[2], x.shape[3])
+        x = self.patch_embed(x)
+        if self.ape:
+            x = x + self.absolute_pos_embed
+        x = self.pos_drop(x)
+
+        for layer in self.layers:
+            x = layer(x)
+
+        x = self.norm(x)  # B L C
+        x = self.patch_unembed(x, x_size)
+
+        return x
+
+    def flops(self):
+        flops = 0
+        H, W = self.patches_resolution
+        flops += H * W * 3 * self.embed_dim * 9
+        flops += self.patch_embed.flops()
+        for i, layer in enumerate(self.layers):
+            flops += layer.flops()
+        flops += H * W * 3 * self.embed_dim * self.embed_dim
+        flops += self.upsample.flops()
+        return flops
+
+
+class My_BlockLayerScale(nn.Module):
+
+    def __init__(self, dim, mlp_ratio=4., drop=0., drop_path=0., act_layer=nn.GELU,
+                 norm_layer=nn.LayerNorm, init_values=1e-5):
+        super().__init__()
+        self.norm1 = norm_layer(dim)
+        self.attn = Flow_Attention(dim)
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.norm2 = norm_layer(dim)
+        mlp_hidden_dim = int(dim * mlp_ratio)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+        self.gamma = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
+
+    def forward(self, x):
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.gamma * self.mlp(self.norm2(x)))
+        return x
+
+
+class Mlp(nn.Module):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
+        super().__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.act = act_layer()
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop(x)
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+
+
+class Flow_Attention(nn.Module):
+    def __init__(self, dim, num_heads=8):
+        super().__init__()
+        self.dim = dim
+        self.num_heads = num_heads
+        self.qkv = nn.Linear(dim, dim * 3, bias=True)
+        self.proj = nn.Linear(dim, dim)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def kernel(self, x):
+        x = torch.sigmoid(x)
+        return x
+
+    def my_sum(self, a, b):
+        # "nhld,nhd->nhl"
+        return torch.sum(a * b[:, :, None, :], dim=-1)
+
+    def forward(self, x):
+        B_, N, C = x.shape
+        qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+        # kernel
+        q, k = self.kernel(q), self.kernel(k)
+        # normalizer
+        sink_incoming = 1.0 / (self.my_sum(q + 1e-6, k.sum(dim=2) + 1e-6) + 1e-6)
+        source_outgoing = 1.0 / (self.my_sum(k + 1e-6, q.sum(dim=2) + 1e-6) + 1e-6)
+        conserved_sink = self.my_sum(q + 1e-6, (k * source_outgoing[:, :, :, None]).sum(dim=2) + 1e-6) + 1e-6
+        conserved_source = self.my_sum(k + 1e-6, (q * sink_incoming[:, :, :, None]).sum(dim=2) + 1e-6) + 1e-6
+        conserved_source = torch.clamp(conserved_source, min=-1.0, max=1.0)  # for stability
+        # allocation
+        sink_allocation = torch.sigmoid(conserved_sink * (float(q.shape[2]) / float(k.shape[2])))
+        # competition
+        source_competition = torch.softmax(conserved_source, dim=-1) * float(k.shape[2])
+        # multiply
+        kv = k.transpose(-2, -1) @ (v * source_competition[:, :, :, None])
+        x_update = ((q @ kv) * sink_incoming[:, :, :, None]) * sink_allocation[:, :, :, None]
+        x = (x_update).transpose(1, 2).reshape(B_, N, C)
+        x = self.proj(x)
+        return x

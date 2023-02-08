@@ -21,7 +21,7 @@ from .TrainingModelInt import TrainingModelInt
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
-from Network.model.Transformer import TransformerBlocks
+from Network.model.Transformer import TransformerBlocks, FlowTransformerBlocks
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -66,7 +66,7 @@ class BMDFormerModel(TrainingModelInt):
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
-        self.transformer = TransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
+        self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
         self.netG_up = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)

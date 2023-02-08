@@ -402,7 +402,10 @@ class LumbarBMDModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_enc_config,
-                 netG_up_config):
+                 netG_up_config,
+                 binary):
+
+        self.binary = binary
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
@@ -439,16 +442,37 @@ class LumbarBMDModelInference(InferenceModelInt):
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
 
             B = xps.shape[0]
-            for i in range(B):
-                fake_drr = fake_drrs[i]  # (1, H, W)
-                case_name = case_names[i]
-                space = spaces[i]
-                save_dir = OSHelper.path_join(output_dir, "fake_drr")
-                OSHelper.mkdirs(save_dir)
-                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
-                                      fake_drr,
-                                      space,
-                                      compress=True)
+            if self.binary:
+                for i in range(B):
+                    fake_drr_with_mask = fake_drrs[i]  # (2, H, W)
+                    fake_drr = fake_drr_with_mask[0].unsqueeze(0)
+                    fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0)
+                    case_name = case_names[i]
+                    space = spaces[i]
+                    save_dir = OSHelper.path_join(output_dir, "fake_drr")
+                    OSHelper.mkdirs(save_dir)
+                    MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
+                                          fake_drr,
+                                          space,
+                                          compress=True)
+
+                    save_mask_dir = OSHelper.path_join(output_dir, "fake_mask_drr")
+                    OSHelper.mkdirs(save_dir)
+                    MetaImageHelper.write(OSHelper.path_join(save_mask_dir, f"{case_name}.mhd"),
+                                          fake_mask_drr,
+                                          space,
+                                          compress=True)
+            else:
+                for i in range(B):
+                    fake_drr = fake_drrs[i]  # (1, H, W)
+                    case_name = case_names[i]
+                    space = spaces[i]
+                    save_dir = OSHelper.path_join(output_dir, "fake_drr")
+                    OSHelper.mkdirs(save_dir)
+                    MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
+                                          fake_drr,
+                                          space,
+                                          compress=True)
 
 
 def weights_init(m):

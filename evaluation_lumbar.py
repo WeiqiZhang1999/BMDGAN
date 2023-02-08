@@ -196,7 +196,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 2.5e-5
+    THRESHOLD_DXA_BMD_315 = 2.45e-5
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 
@@ -209,7 +209,7 @@ def main():
             if case_name.split('.')[-1] == 'mhd':
             #     args.append((case_name, fold))
                 final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
-                # final2.append(task2(case_name, fold))
+                final2.append(task2(case_name, fold))
 
 
 
@@ -246,17 +246,17 @@ def main():
     # psnr = 0.
     # total_count = 0.
     # ssim = 0.
-    # fake_bmd_list = []
-    # gt_bmd_List = []
+    fake_bmd_list2 = []
+    gt_bmd_List2 = []
     # # print(final)
-    # for i, j, l1, l2, k in final2:
-    #     psnr += i
-    #     ssim += j
-    #     fake_bmd_list += l1
-    #     gt_bmd_List += l2
-    #     total_count += k
-    #
-    # new_pcc = pearsonr(fake_bmd_list, gt_bmd_List)[0]
+    for i, j, l1, l2, k in final2:
+        # psnr += i
+        # ssim += j
+        fake_bmd_list2 += l1
+        gt_bmd_List2 += l2
+        # total_count += k
+
+    new_pcc = pearsonr(fake_bmd_list2, gt_bmd_List2)[0]
 
     print(f'Mean PSNR: %.3f' % (psnr / total_count))
     print(f'Mean SSIM: %.3f' % (ssim / total_count))
@@ -265,7 +265,7 @@ def main():
     print('Conventional PCC:  %.3f' % pcc)
     print(f'Using Threshold: {THRESHOLD_DXA_BMD_315}')
 
-    # print('new PCC:  %.3f' % new_pcc)
+    print('new PCC:  %.3f' % new_pcc)
     end = time()
     print('Time taken %.3f seconds.' % (end - start))
 

@@ -439,14 +439,17 @@ class LumbarBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
+            if self.binary:
+                fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
+            else:
+                fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu()
 
             B = xps.shape[0]
             if self.binary:
                 for i in range(B):
                     fake_drr_with_mask = fake_drrs[i]  # (2, H, W)
-                    fake_drr = fake_drr_with_mask[0].unsqueeze(0)
-                    fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0)
+                    fake_drr = fake_drr_with_mask[0].unsqueeze(0).numpy()
+                    fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0).numpy()
                     case_name = case_names[i]
                     space = spaces[i]
                     save_dir = OSHelper.path_join(output_dir, "fake_drr")

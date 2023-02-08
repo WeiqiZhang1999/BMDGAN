@@ -54,7 +54,7 @@ class BMDFormerModel(TrainingModelInt):
 
         # self.rank = DDPHelper.rank()
         # self.local_rank = DDPHelper.local_rank()
-        self.device = torch.device('cuda:0')
+        self.device = 'cuda:0'
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)

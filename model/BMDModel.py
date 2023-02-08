@@ -460,7 +460,7 @@ class LumbarBMDModelInference(InferenceModelInt):
                                           compress=True)
 
                     save_mask_dir = OSHelper.path_join(output_dir, "fake_mask_drr")
-                    OSHelper.mkdirs(save_dir)
+                    OSHelper.mkdirs(save_mask_dir)
                     MetaImageHelper.write(OSHelper.path_join(save_mask_dir, f"{case_name}.mhd"),
                                           fake_mask_drr,
                                           space,

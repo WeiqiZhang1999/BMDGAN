@@ -279,7 +279,6 @@ class CycleBMDModel(TrainingModelInt):
         for data in iterator:
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
-            drrs = data["drr"].to(self.device)
             fake_drrs = self.netG(xps)
             # drrs_ = ImageHelper.denormal(drrs)
             # fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -295,11 +294,11 @@ class CycleBMDModel(TrainingModelInt):
                 if self.binary:
                     fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
                     fake_masks_ = fake_drrs[:, 1, :, :].unsqueeze(1)
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43,
-                                                       self.MAX_VAL_DXA_MASK_DRR_43)
-                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_165, self.MAX_VAL_DXA_DRR_165)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_165, self.MAX_VAL_DXA_DRR_165)
+                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_165,
+                                                       self.MAX_VAL_DXA_MASK_DRR_165)
+                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_165, self.MAX_VAL_DXA_MASK_DRR_165)
 
                     for i in range(B):
                         inference_ai_list.append(

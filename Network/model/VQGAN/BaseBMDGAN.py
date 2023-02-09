@@ -7,14 +7,15 @@
 
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
+from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
 import torch.nn as nn
 from Utils.ImportHelper import ImportHelper
 
 
 class BaseBMDGAN(nn.Module):
     def __init__(self,
-                 netG_up_config,
                  in_channels=1,
+                 out_channels=2,
                  norm_type='group',
                  ):
         super().__init__()
@@ -33,9 +34,11 @@ class BaseBMDGAN(nn.Module):
                                                  norm_type=norm_type,
                                                  padding_type="reflect")
 
-        self.decoder = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.decoder = self.decoder(**netG_up_config)
+        self.decoder = UpsamplerHead(ngf=self.ngf,
+                                     n_upsampling=self.n_upsampling,
+                                     output_nc=out_channels,
+                                     norm_type=norm_type,
+                                     padding_type="reflect")
 
     def forward(self, x):
         x = self.fuse(self.encoder(x))
@@ -45,8 +48,8 @@ class BaseBMDGAN(nn.Module):
 
 class BaseBinaryMaskBMDGAN(nn.Module):
     def __init__(self,
-                 netG_up_config,
                  in_channels=2,
+                 out_channels=1,
                  norm_type='group',
                  ):
         super().__init__()
@@ -65,9 +68,11 @@ class BaseBinaryMaskBMDGAN(nn.Module):
                                                  norm_type=norm_type,
                                                  padding_type="reflect")
 
-        self.decoder = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.decoder = self.decoder(**netG_up_config)
+        self.decoder = UpsamplerHead(ngf=self.ngf,
+                                     n_upsampling=self.n_upsampling,
+                                     output_nc=out_channels,
+                                     norm_type=norm_type,
+                                     padding_type="reflect")
 
     def forward(self, x):
         x = self.fuse(self.encoder(x))

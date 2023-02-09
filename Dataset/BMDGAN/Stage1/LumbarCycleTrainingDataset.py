@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2/9/2023 11:28 PM
 # @Author  : ZHANG WEIQI
-# @File    : CycleTrainingDataset.py
+# @File    : LumbarCycleTrainingDataset.py
 # @Software: PyCharm
 import os
 

@@ -43,9 +43,7 @@ class CycleBMDModel(TrainingModelInt):
                  # netG_helper_up_config,
                  netG_up_config,
                  lambda_GAN=1.,
-                 lambda_AE=100.,
-                 lambda_FM=10.,
-                 lambda_GC=1.,
+                 lambda_cycle=10.,
                  log_pcc=False,
                  lumbar_data=False,
                  binary=False,
@@ -88,13 +86,10 @@ class CycleBMDModel(TrainingModelInt):
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
-        self.lambda_AE = lambda_AE
-        self.lambda_FM = lambda_FM
-        self.lambda_GC = lambda_GC
+        self.lambda_cycle = lambda_cycle
+
         assert self.lambda_GAN > 0.
         self.crit_GAN = LSGANLoss().to(self.device)
-        if self.lambda_GC > 0.:
-            self.crit_GC = GradientCorrelationLoss2D(grad_method="sobel").to(self.device)
 
         self.log_bmd_pcc = log_pcc
 
@@ -145,33 +140,30 @@ class CycleBMDModel(TrainingModelInt):
         # calculate GAN Loss
         g_loss_drr = self.crit_GAN.crit_real(D_pred_fake_drr) / self.netD.module.num_D
 
-        # calculate AE Loss
-        if self.lambda_AE > 0.:
-            ae_loss_drr = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
-        else:
-            ae_loss_drr = 0.
+        # calculate cycle loss
+        cycle_loss_drr = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
 
-        # calculate FM Loss
-        if self.lambda_FM > 0.:
-            fm_loss_drr = calculate_FM_loss(D_pred_fake_drr, D_pred_real_drr,
-                                            self.netD.module.n_layer,
-                                            self.netD.module.num_D)
-        else:
-            fm_loss_drr = 0.
-
-        # calculate GC Loss
-        if self.lambda_GC > 0. and self.binary:
-            # drr has two channels: (drr, mask drr)
-            drr0 = drr[:, 0, :, :].unsqueeze(1)
-            fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
-            mask1 = drr[:, 1, :, :].unsqueeze(1)
-            fake_mask1 = fake_drr[:, 1, :, :].unsqueeze(1)
-            gc_loss_drr = self.crit_GC(drr0, fake_drr0) + self.crit_GC(mask1, fake_mask1)
-        elif self.lambda_GC > 0 and not self.binary:
-            # drr has one channel: (drr)
-            gc_loss_drr = self.crit_GC(drr, fake_drr)
-        else:
-            gc_loss_drr = 0
+        # # calculate FM Loss
+        # if self.lambda_FM > 0.:
+        #     fm_loss_drr = calculate_FM_loss(D_pred_fake_drr, D_pred_real_drr,
+        #                                     self.netD.module.n_layer,
+        #                                     self.netD.module.num_D)
+        # else:
+        #     fm_loss_drr = 0.
+        #
+        # # calculate GC Loss
+        # if self.lambda_GC > 0. and self.binary:
+        #     # drr has two channels: (drr, mask drr)
+        #     drr0 = drr[:, 0, :, :].unsqueeze(1)
+        #     fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
+        #     mask1 = drr[:, 1, :, :].unsqueeze(1)
+        #     fake_mask1 = fake_drr[:, 1, :, :].unsqueeze(1)
+        #     gc_loss_drr = self.crit_GC(drr0, fake_drr0) + self.crit_GC(mask1, fake_mask1)
+        # elif self.lambda_GC > 0 and not self.binary:
+        #     # drr has one channel: (drr)
+        #     gc_loss_drr = self.crit_GC(drr, fake_drr)
+        # else:
+        #     gc_loss_drr = 0
 
 
         # Cycle DRR -> Xp
@@ -182,43 +174,41 @@ class CycleBMDModel(TrainingModelInt):
         # calculate GAN Loss
         g_loss_xp = self.crit_GAN.crit_real(D_pred_fake_xp) / self.netD_helper.module.num_D
 
-        # calculate AE Loss
-        if self.lambda_AE > 0.:
-            ae_loss_xp = torch.abs(xp.contiguous() - fake_xp.contiguous()).mean()
-        else:
-            ae_loss_xp = 0.
+        # calculate cycle loss
+        cycle_loss_xp = torch.abs(xp.contiguous() - fake_xp.contiguous()).mean()
 
-        # calculate FM Loss
-        if self.lambda_FM > 0.:
-            fm_loss_xp = calculate_FM_loss(D_pred_fake_xp, D_pred_real_xp,
-                                           self.netD_helper.module.n_layer,
-                                           self.netD_helper.module.num_D)
-        else:
-            fm_loss_xp = 0.
 
-        # calculate GC Loss
-        # Whatever using binary mask, fake xp only has one channel: (xp)
-        if self.lambda_GC > 0:
-            gc_loss_xp = self.crit_GC(xp, fake_xp)
-        else:
-            gc_loss_xp = 0
+        # # calculate FM Loss
+        # if self.lambda_FM > 0.:
+        #     fm_loss_xp = calculate_FM_loss(D_pred_fake_xp, D_pred_real_xp,
+        #                                    self.netD_helper.module.n_layer,
+        #                                    self.netD_helper.module.num_D)
+        # else:
+        #     fm_loss_xp = 0.
+        #
+        # # calculate GC Loss
+        # # Whatever using binary mask, fake xp only has one channel: (xp)
+        # if self.lambda_GC > 0:
+        #     gc_loss_xp = self.crit_GC(xp, fake_xp)
+        # else:
+        #     gc_loss_xp = 0
 
         # Sum and log each loss
-        ae_loss = ae_loss_drr + ae_loss_xp
-        log["G_AE"] = ae_loss.detach()
-        G_loss = G_loss + ae_loss * self.lambda_AE
+        cycle_loss = cycle_loss_drr + cycle_loss_xp
+        log["G_CYCLE"] = cycle_loss.detach()
+        G_loss = G_loss + cycle_loss * self.lambda_cycle
 
         g_loss = g_loss_drr + g_loss_xp
         log["G_GAN"] = g_loss.detach()
         G_loss += g_loss * self.lambda_GAN
 
-        fm_loss = fm_loss_drr + fm_loss_xp
-        log["G_FM"] = fm_loss.detach()
-        G_loss += fm_loss * self.lambda_FM
-
-        gc_loss = gc_loss_drr + gc_loss_xp
-        log["G_GC"] = gc_loss.detach()
-        G_loss += gc_loss * self.lambda_GC
+        # fm_loss = fm_loss_drr + fm_loss_xp
+        # log["G_FM"] = fm_loss.detach()
+        # G_loss += fm_loss * self.lambda_FM
+        #
+        # gc_loss = gc_loss_drr + gc_loss_xp
+        # log["G_GC"] = gc_loss.detach()
+        # G_loss += gc_loss * self.lambda_GC
 
         # calculate Discriminator and Discriminator helper's Loss
         D_loss = 0.

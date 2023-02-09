@@ -109,11 +109,11 @@ class BMDModel(TrainingModelInt):
         if self.lumbar_data and view == 'AP':
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 36.74824
-            self.THRESHOLD_DXA_BMD_315 = 0.05
+            self.THRESHOLD_DXA_BMD_315 = 1e-5
         elif self.lumbar_data and view == 'LAT':
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 36.75209
-            self.THRESHOLD_DXA_BMD_315 = 0.05
+            self.THRESHOLD_DXA_BMD_315 = 1e-5
         else:
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 40398.234376

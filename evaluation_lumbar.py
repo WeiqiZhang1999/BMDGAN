@@ -39,15 +39,15 @@ def load_image(load_path, load_size):
     return img.astype(np.float32), spacing
 
 
-def calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask:  np.ndarray | torch.Tensor
-                                     )-> float | np.ndarray | torch.Tensor:
+def calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor
+                                     ) -> float | np.ndarray | torch.Tensor:
     area = mask.sum()
     numerator = (image * mask).sum()
     return numerator / area
 
 
 def calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
-                                    threshold: int | float) -> float | np.ndarray | torch.Tensor:
+                                   threshold: int | float) -> float | np.ndarray | torch.Tensor:
     mask = image >= threshold
     area = mask.sum()
     if area <= 0.:
@@ -128,6 +128,7 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
 
     return [psnr, ssim, inference_ai_list, gt_bmds, total_count]
 
+
 def task2(case_name, fold):
     psnr = 0.
     ssim = 0.
@@ -169,7 +170,6 @@ def task2(case_name, fold):
     mask_drr_ = denormal(fake_drr, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
     mask_drr_ = np.clip(mask_drr_, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
 
-
     inference_ai_list.append(
         calc_average_intensity_with_mask(fake_drr_, mask_drr_))
 
@@ -181,6 +181,7 @@ def task2(case_name, fold):
     total_count += 1
 
     return [psnr, ssim, inference_ai_list, gt_bmds, total_count]
+
 
 def main():
     start = time()
@@ -207,11 +208,9 @@ def main():
         case_name_list = os.listdir(base_dir)
         for case_name in case_name_list:
             if case_name.split('.')[-1] == 'mhd':
-            #     args.append((case_name, fold))
+                #     args.append((case_name, fold))
                 final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
                 final2.append(task2(case_name, fold))
-
-
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",

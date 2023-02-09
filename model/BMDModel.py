@@ -110,17 +110,20 @@ class BMDModel(TrainingModelInt):
             self.MIN_VAL_DXA_DRR_43 = 0.
             self.MAX_VAL_DXA_DRR_43 = 36.74824
             self.THRESHOLD_DXA_BMD_43 = 1e-5
+            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
+            self.MAX_VAL_DXA_MASK_DRR_43 = 91.80859
         elif self.lumbar_data and view == 'LAT':
             self.MIN_VAL_DXA_DRR_43 = 0.
             self.MAX_VAL_DXA_DRR_43 = 36.75209
             self.THRESHOLD_DXA_BMD_43 = 1e-5
+            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
+            self.MAX_VAL_DXA_MASK_DRR_43 = 89.91797
         else:
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 40398.234376
             self.THRESHOLD_DXA_BMD_315 = 1591.5
 
-        self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-        self.MAX_VAL_DXA_MASK_DRR_43 = 89.91797
+
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

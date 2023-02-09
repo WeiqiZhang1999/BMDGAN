@@ -137,10 +137,10 @@ def task2(case_name, fold):
     total_count = 0.
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
-    MAX_VAL_DXA_DRR_315 = 36.75209
+    MAX_VAL_DXA_DRR_315 = 36.74824
 
     MIN_VAL_DXA_MASK_DRR_315 = 0.
-    MAX_VAL_DXA_MASK_DRR_315 = 89.91797
+    MAX_VAL_DXA_MASK_DRR_315 = 91.80859
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_mask_e630/output'

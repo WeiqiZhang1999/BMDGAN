@@ -60,8 +60,14 @@ class CycleBMDModel(TrainingModelInt):
 
         # Prepare models
         if self.lumbar_data and self.binary:
+            self.netG = ImportHelper.get_class(netG_up_config["class"])
+            netG_up_config.pop("class")
             self.netG = BaseBMDGAN(**netG_up_config).to(self.device)
+
+            self.netG_helper = ImportHelper.get_class(netG_helper_up_config["class"])
+            netG_helper_up_config.pop("class")
             self.netG_helper = BaseBinaryMaskBMDGAN(**netG_helper_up_config).to(self.device)
+
             self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
             self.netD_helper = MultiscaleDiscriminator(input_nc=3).to(self.device)
             self.optimizer_config = optimizer_config

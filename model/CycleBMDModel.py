@@ -99,17 +99,17 @@ class CycleBMDModel(TrainingModelInt):
         self.log_bmd_pcc = log_pcc
 
         if self.lumbar_data and view == 'AP':
-            self.MIN_VAL_DXA_DRR_43 = 0.
-            self.MAX_VAL_DXA_DRR_43 = 36.74824
-            self.THRESHOLD_DXA_BMD_43 = 1e-5
-            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-            self.MAX_VAL_DXA_MASK_DRR_43 = 91.80859
+            self.MIN_VAL_DXA_DRR_165 = -5980.78125
+            self.MAX_VAL_DXA_DRR_165 = 52765.87772881985
+            self.THRESHOLD_DXA_BMD_165 = 1e-5
+            self.MIN_VAL_DXA_MASK_DRR_165 = 0.
+            self.MAX_VAL_DXA_MASK_DRR_165 = 88.82999789714813
         elif self.lumbar_data and view == 'LAT':
-            self.MIN_VAL_DXA_DRR_43 = 0.
-            self.MAX_VAL_DXA_DRR_43 = 36.75209
-            self.THRESHOLD_DXA_BMD_43 = 1e-5
-            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-            self.MAX_VAL_DXA_MASK_DRR_43 = 89.91797
+            self.MIN_VAL_DXA_DRR_165 = -3006.5625
+            self.MAX_VAL_DXA_DRR_165 = 61318.125
+            self.THRESHOLD_DXA_BMD_165 = 1e-5
+            self.MIN_VAL_DXA_MASK_DRR_165 = 0.
+            self.MAX_VAL_DXA_MASK_DRR_165 = 95.78903341293335
         else:
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 40398.234376

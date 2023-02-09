@@ -221,7 +221,7 @@ class LumbarCycleInferenceDataset(Dataset):
             self.bmd_pool.append(self.bmd_df.loc[df_case_name, 'CT-vBMD'])
             self.xp_pool.append(xp_dao)
 
-        assert len(self.xp_pool) > 0 and self.bmd_pool > 0
+        assert len(self.xp_pool) > 0 and len(self.bmd_pool) > 0
 
         if self.verbose:
             print("Test Datasets")

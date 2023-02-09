@@ -40,7 +40,7 @@ class CycleBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_helper_up_config,
+                 # netG_helper_up_config,
                  netG_up_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,

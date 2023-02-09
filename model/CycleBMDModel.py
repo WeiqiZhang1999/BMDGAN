@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2/9/2023 9:07 PM
+# @Author  : ZHANG WEIQI
+# @File    : CycleBMDModel.py
+# @Software: PyCharm
+
 import itertools
 
 from Utils.DDPHelper import DDPHelper
@@ -14,6 +21,7 @@ from .TrainingModelInt import TrainingModelInt
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
+from Network.model.VQGAN.BaseBMDGAN import BaseBMDGAN, BaseBinaryMaskBMDGAN
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -28,7 +36,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class BMDModel(TrainingModelInt):
+class CycleBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
@@ -55,44 +63,28 @@ class BMDModel(TrainingModelInt):
 
         # Prepare models
         if self.lumbar_data and self.binary:
-            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-            self.optimizer_config = optimizer_config
-            # self.clip_grad = clip_grad
-            # self.clip_max_norm = clip_max_norm
-            # self.clip_norm_type = clip_norm_type
-            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                         output_nc=(64 * (2 ** 2)),
-                                                         norm_type="group",
-                                                         padding_type="reflect").to(self.device)
-            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-            netG_up_config.pop("class")
-            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+            self.netG = BaseBMDGAN(**netG_up_config).to(self.device)
+            self.netG_helper = BaseBinaryMaskBMDGAN(**netG_up_config).to(self.device)
             self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
-        else:
-            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+            self.netD_helper = MultiscaleDiscriminator(input_nc=3).to(self.device)
             self.optimizer_config = optimizer_config
-            # self.clip_grad = clip_grad
-            # self.clip_max_norm = clip_max_norm
-            # self.clip_norm_type = clip_norm_type
-            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                         output_nc=(64 * (2 ** 2)),
-                                                         norm_type="group",
-                                                         padding_type="reflect").to(self.device)
-            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-            netG_up_config.pop("class")
-            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        else:
+            self.netG = BaseBMDGAN(**netG_up_config).to(self.device)
+            self.netG_helper = BaseBMDGAN(**netG_up_config).to(self.device)
             self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
+            self.netD_helper = MultiscaleDiscriminator(input_nc=2).to(self.device)
+            self.optimizer_config = optimizer_config
 
         if self.rank == 0:
-            self.netG_enc.apply(weights_init)
-            self.netG_fus.apply(weights_init)
-            self.netG_up.apply(weights_init)
+            self.netG.apply(weights_init)
+            self.netG_helper.apply(weights_init)
+            self.netD_helper.apply(weights_init)
             self.netD.apply(weights_init)
 
         # Wrap DDP
-        self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
-        self.netG_fus = DDPHelper.shell_ddp(self.netG_fus)
-        self.netG_up = DDPHelper.shell_ddp(self.netG_up)
+        self.netG = DDPHelper.shell_ddp(self.netG)
+        self.netG_helper = DDPHelper.shell_ddp(self.netG_helper)
+        self.netD_helper = DDPHelper.shell_ddp(self.netD_helper)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
@@ -123,93 +115,147 @@ class BMDModel(TrainingModelInt):
             self.MAX_VAL_DXA_DRR_315 = 40398.234376
             self.THRESHOLD_DXA_BMD_315 = 1591.5
 
-
-
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.module.parameters(),
-                                                        self.netG_fus.module.parameters(),
-                                                        self.netG_up.module.parameters()),
+        self.netG_optimizer = optimizer(itertools.chain(self.netG.module.parameters(),
+                                                        self.netG_helper.module.parameters()),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
-        self.netD_optimizer = optimizer(self.netD.module.parameters(),
+        self.netD_optimizer = optimizer(itertools.chain(self.netD.module.parameters(),
+                                                        self.netD_helper.module.parameters()),
                                         **self.optimizer_config)
         self.netD_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer, self.netD_optimizer]
 
     def __compute_loss(self, data):
+        # calculate Generator and Generator helper's Loss
         G_loss = 0.
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
 
-        D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
-        D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
+        # Cycle Xp -> DRR
+        fake_drr = self.netG(xp)
+        D_pred_fake_drr = self.netD(torch.cat((xp, fake_drr), dim=1))
+        D_pred_real_drr = self.netD(torch.cat((xp, drr), dim=1))
 
-        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
+        # calculate GAN Loss
+        g_loss_drr = self.crit_GAN.crit_real(D_pred_fake_drr) / self.netD.module.num_D
+
+        # calculate AE Loss
+        if self.lambda_AE > 0.:
+            ae_loss_drr = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
+        else:
+            ae_loss_drr = 0.
+
+        # calculate FM Loss
+        if self.lambda_FM > 0.:
+            fm_loss_drr = calculate_FM_loss(D_pred_fake_drr, D_pred_real_drr,
+                                            self.netD.module.n_layer,
+                                            self.netD.module.num_D)
+        else:
+            fm_loss_drr = 0.
+
+        # calculate GC Loss
+        if self.lambda_GC > 0. and self.binary:
+            # drr has two channels: (drr, mask drr)
+            drr0 = drr[:, 0, :, :].unsqueeze(1)
+            fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
+            mask1 = drr[:, 1, :, :].unsqueeze(1)
+            fake_mask1 = fake_drr[:, 1, :, :].unsqueeze(1)
+            gc_loss_drr = self.crit_GC(drr0, fake_drr0) + self.crit_GC(mask1, fake_mask1)
+        elif self.lambda_GC > 0 and not self.binary:
+            # drr has one channel: (drr)
+            gc_loss_drr = self.crit_GC(drr, fake_drr)
+        else:
+            gc_loss_drr = 0
+
+
+        # Cycle DRR -> Xp
+        fake_xp = self.netG_helper(drr)
+        D_pred_fake_xp = self.netD_helper(torch.cat((drr, fake_xp), dim=1))
+        D_pred_real_xp = self.netD_helper(torch.cat((drr, xp), dim=1))
+
+        # calculate GAN Loss
+        g_loss_xp = self.crit_GAN.crit_real(D_pred_fake_xp) / self.netD_helper.module.num_D
+
+        # calculate AE Loss
+        if self.lambda_AE > 0.:
+            ae_loss_xp = torch.abs(xp.contiguous() - fake_xp.contiguous()).mean()
+        else:
+            ae_loss_xp = 0.
+
+        # calculate FM Loss
+        if self.lambda_FM > 0.:
+            fm_loss_xp = calculate_FM_loss(D_pred_fake_xp, D_pred_real_xp,
+                                           self.netD_helper.module.n_layer,
+                                           self.netD_helper.module.num_D)
+        else:
+            fm_loss_xp = 0.
+
+        # calculate GC Loss
+        # Whatever using binary mask, fake xp only has one channel: (xp)
+        if self.lambda_GC > 0:
+            gc_loss_xp = self.crit_GC(xp, fake_xp)
+        else:
+            gc_loss_xp = 0
+
+        # Sum and log each loss
+        ae_loss = ae_loss_drr + ae_loss_xp
+        log["G_AE"] = ae_loss.detach()
+        G_loss = G_loss + ae_loss * self.lambda_AE
+
+        g_loss = g_loss_drr + g_loss_xp
         log["G_GAN"] = g_loss.detach()
         G_loss += g_loss * self.lambda_GAN
 
-        if self.lambda_AE > 0.:
-            ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
-            log["G_AE"] = ae_loss.detach()
-            G_loss = G_loss + ae_loss * self.lambda_AE
+        fm_loss = fm_loss_drr + fm_loss_xp
+        log["G_FM"] = fm_loss.detach()
+        G_loss += fm_loss * self.lambda_FM
 
-        if self.lambda_FM > 0.:
-            fm_loss = calculate_FM_loss(D_pred_fake, D_pred_real,
-                                        self.netD.module.n_layer,
-                                        self.netD.module.num_D)
-            log["G_FM"] = fm_loss.detach()
-            G_loss += fm_loss * self.lambda_FM
+        gc_loss = gc_loss_drr + gc_loss_xp
+        log["G_GC"] = gc_loss.detach()
+        G_loss += gc_loss * self.lambda_GC
 
-        if self.lambda_GC > 0. and self.binary:
-            drr0 = drr[:, 0, :, :].unsqueeze(1)
-            fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
-            drr1 = drr[:, 1, :, :].unsqueeze(1)
-            fake_drr1 = fake_drr[:, 1, :, :].unsqueeze(1)
-            # print(drr0.shape)
-            # print(drr0.shape)
-            gc_loss_1 = self.crit_GC(drr0, fake_drr0)
-            gc_loss_2 = self.crit_GC(drr1, fake_drr1)
-            gc_loss = gc_loss_1 + gc_loss_2
-            log["G_GC"] = gc_loss.detach()
-            G_loss += gc_loss * self.lambda_GC
-        else:
-            gc_loss = self.crit_GC(drr, fake_drr)
-            log["G_GC"] = gc_loss.detach()
-            G_loss += gc_loss * self.lambda_GC
-
+        # calculate Discriminator and Discriminator helper's Loss
         D_loss = 0.
-        D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
-        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.module.num_D
-        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.module.num_D
-        log["D_real"] = d_loss_real.detach()
-        log["D_fake"] = d_loss_fake.detach()
-        D_loss = D_loss + d_loss_real * 0.5 + d_loss_fake * 0.5
+        # Cycle Xp -> DRR
+        D_pred_fake_drr_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
+        d_loss_fake_drr = self.crit_GAN.crit_fake(D_pred_fake_drr_detach) / self.netD.module.num_D
+        d_loss_real_drr = self.crit_GAN.crit_real(D_pred_real_drr) / self.netD.module.num_D
 
-        return G_loss, D_loss, log
+        log["netD_real"] = d_loss_real_drr.detach()
+        log["netD_fake"] = d_loss_fake_drr.detach()
+        D_loss = D_loss + d_loss_fake_drr * 0.5 + d_loss_fake_drr * 0.5
 
-    @torch.no_grad()
-    def test_generator(self, x):
-        fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(x)))
-        return fake_drrs
+        D_helper_loss = 0.
+        # Cycle Xp -> DRR
+        D_pred_fake_xp_detach = self.netD(torch.cat((drr, fake_xp.detach()), dim=1))
+        d_loss_fake_xp = self.crit_GAN.crit_fake(D_pred_fake_xp_detach) / self.netD_helper.module.num_D
+        d_loss_real_xp = self.crit_GAN.crit_real(D_pred_real_xp) / self.netD_helper.module.num_D
+
+        log["netD_helper_real"] = d_loss_fake_xp.detach()
+        log["netD_helper_fake"] = d_loss_real_xp.detach()
+        D_helper_loss = D_helper_loss + d_loss_fake_xp * 0.5 + d_loss_real_xp * 0.5
+
+        return G_loss, D_loss, D_helper_loss, log
 
     def train_batch(self, data, batch_id, epoch):
-        g_loss, d_loss, log = self.__compute_loss(data)
+        g_loss, d_loss, d_helper_loss, log = self.__compute_loss(data)
 
-        TorchHelper.set_requires_grad(self.netD.module, False)
+        TorchHelper.set_requires_grad([self.netD.module, self.netD_helper.module], False)
         self.netG_optimizer.zero_grad()
         self.netG_grad_scaler.scale(g_loss).backward()
         self.netG_grad_scaler.step(self.netG_optimizer)
         self.netG_grad_scaler.update()
 
-        TorchHelper.set_requires_grad(self.netD.module, True)
+        TorchHelper.set_requires_grad([self.netD.module, self.netD_helper.module], True)
         self.netD_optimizer.zero_grad()
         self.netD_grad_scaler.scale(d_loss).backward()
+        self.netD_grad_scaler.scale(d_helper_loss).backward()
         self.netD_grad_scaler.step(self.netD_optimizer)
         self.netD_grad_scaler.update()
 
@@ -234,24 +280,25 @@ class BMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
+            fake_drrs = self.netG(xps)
+            # drrs_ = ImageHelper.denormal(drrs)
+            # fake_drrs_ = ImageHelper.denormal(fake_drrs)
+            # drrs_ = torch.clamp(drrs_, 0., 255.)
+            # fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
+            #
+            # psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
+            #                                 reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+            # ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
+            #                                             reduction=None, data_range=255.).sum()
 
-            drrs_ = ImageHelper.denormal(drrs)
-            fake_drrs_ = ImageHelper.denormal(fake_drrs)
-            drrs_ = torch.clamp(drrs_, 0., 255.)
-            fake_drrs_ = torch.clamp(fake_drrs_, 0., 255.)
-
-            psnr += peak_signal_noise_ratio(fake_drrs_, drrs_,
-                                            reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-            ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
-                                                        reduction=None, data_range=255.).sum()
             if self.log_bmd_pcc:
                 if self.binary:
                     fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
                     fake_masks_ = fake_drrs[:, 1, :, :].unsqueeze(1)
                     fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
                     fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43,
+                                                       self.MAX_VAL_DXA_MASK_DRR_43)
                     fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
 
                     for i in range(B):
@@ -273,8 +320,9 @@ class BMDModel(TrainingModelInt):
             DDPHelper.all_reduce(psnr, DDPHelper.ReduceOp.AVG)
             DDPHelper.all_reduce(ssim, DDPHelper.ReduceOp.AVG)
 
-        ret = {"PSNR": psnr.cpu().numpy(),
-               "SSIM": ssim.cpu().numpy()}
+        # ret = {"PSNR": psnr.cpu().numpy(),
+        #        "SSIM": ssim.cpu().numpy()}
+        ret = {}
 
         if self.log_bmd_pcc:
             inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
@@ -289,7 +337,7 @@ class BMDModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
+        fake_drrs = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         if self.binary:
             drrs_ = drrs[:, 0, :, :].unsqueeze(1)
@@ -317,7 +365,7 @@ class BMDModel(TrainingModelInt):
         if resume:
             assert strict == True
 
-        for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
+        for signature in ["netG", "netG_helper", "netD_helper", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
@@ -326,7 +374,7 @@ class BMDModel(TrainingModelInt):
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
+        for signature in ["netG", "netG_helper", "netD_helper", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
             torch.save(net.module.state_dict(), save_path)
@@ -334,11 +382,11 @@ class BMDModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
+            for signature in ["netG", "netG_helper", "netD_helper", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
+            for signature in ["netG", "netG_helper", "netD_helper", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
 
@@ -362,7 +410,7 @@ class BMDModel(TrainingModelInt):
 
     @staticmethod
     def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor
-                                         ) -> float | np.ndarray | torch.Tensor:
+                                          ) -> float | np.ndarray | torch.Tensor:
         area = mask.sum()
         numerator = (image * mask).sum()
         return numerator / area

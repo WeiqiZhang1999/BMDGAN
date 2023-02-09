@@ -335,24 +335,19 @@ class CycleBMDModel(TrainingModelInt):
     @torch.no_grad()
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
-        drrs = data["drr"].to(self.device)
+
         fake_drrs = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
         if self.binary:
-            drrs_ = drrs[:, 0, :, :].unsqueeze(1)
-            masks = drrs[:, 1, :, :].unsqueeze(1)
             fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
             fake_masks = fake_drrs[:, 1, :, :].unsqueeze(1)
 
             ret = {"Xray": xps,
-                   "DRR": drrs_,
-                   "Mask DRR": masks,
                    "Fake DRR": fake_drrs_,
                    "Fake Mask": fake_masks,
                    }
         else:
             ret = {"Xray": xps,
-                   "DRR": drrs,
                    "Fake_DRR": fake_drrs}
         for key, val in ret.items():
             for i in range(val.shape[0]):

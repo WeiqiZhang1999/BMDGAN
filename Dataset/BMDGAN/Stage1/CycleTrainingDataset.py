@@ -262,3 +262,19 @@ class LumbarCycleInferenceDataset(Dataset):
         spacing[0], spacing[1], spacing[2] = temp_spacing[2], temp_spacing[0], temp_spacing[1]
         img = np.clip(img, -1., 1.)
         return img.astype(np.float32), spacing
+
+
+class LumbarCycleVisualDataset(Dataset):
+
+    def __init__(self, infer_dataset: LumbarCycleInferenceDataset, batch_size=6, verbose=False):
+        super().__init__()
+        self.backbone_dataset = infer_dataset
+        self.batch_size = batch_size
+        self.verbose = verbose
+
+    def __len__(self):
+        return self.batch_size
+
+    def __getitem__(self, idx):
+        idx = np.random.randint(0, len(self.backbone_dataset))
+        return self.backbone_dataset.get_item(idx)

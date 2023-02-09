@@ -40,7 +40,7 @@ class CycleBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_enc_config,
+                 netG_helper_up_config,
                  netG_up_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
@@ -50,9 +50,6 @@ class CycleBMDModel(TrainingModelInt):
                  lumbar_data=False,
                  binary=False,
                  view='AP'
-                 # clip_grad=False,
-                 # clip_max_norm=0.01,
-                 # clip_norm_type=2.0
                  ):
 
         self.rank = DDPHelper.rank()
@@ -64,7 +61,7 @@ class CycleBMDModel(TrainingModelInt):
         # Prepare models
         if self.lumbar_data and self.binary:
             self.netG = BaseBMDGAN(**netG_up_config).to(self.device)
-            self.netG_helper = BaseBinaryMaskBMDGAN(**netG_up_config).to(self.device)
+            self.netG_helper = BaseBinaryMaskBMDGAN(**netG_helper_up_config).to(self.device)
             self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
             self.netD_helper = MultiscaleDiscriminator(input_nc=3).to(self.device)
             self.optimizer_config = optimizer_config

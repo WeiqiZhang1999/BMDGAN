@@ -237,7 +237,7 @@ class LumbarCycleInferenceDataset(Dataset):
     def __getitem__(self, idx):
         ct_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_dao = self.xp_pool[idx]
-        xp, spacing = self._load_image(self.xp_pool[idx], self.image_size)
+        xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
         return {"xp": xp, "spacing": spacing, "case_name": case_name, "CTBMD": ct_bmd}

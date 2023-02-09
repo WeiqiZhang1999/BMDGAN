@@ -107,17 +107,20 @@ class BMDModel(TrainingModelInt):
         self.log_bmd_pcc = log_pcc
 
         if self.lumbar_data and view == 'AP':
-            self.MIN_VAL_DXA_DRR_315 = 0.
-            self.MAX_VAL_DXA_DRR_315 = 36.74824
-            self.THRESHOLD_DXA_BMD_315 = 1e-5
+            self.MIN_VAL_DXA_DRR_43 = 0.
+            self.MAX_VAL_DXA_DRR_43 = 36.74824
+            self.THRESHOLD_DXA_BMD_43 = 1e-5
         elif self.lumbar_data and view == 'LAT':
-            self.MIN_VAL_DXA_DRR_315 = 0.
-            self.MAX_VAL_DXA_DRR_315 = 36.75209
-            self.THRESHOLD_DXA_BMD_315 = 1e-5
+            self.MIN_VAL_DXA_DRR_43 = 0.
+            self.MAX_VAL_DXA_DRR_43 = 36.75209
+            self.THRESHOLD_DXA_BMD_43 = 1e-5
         else:
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 40398.234376
             self.THRESHOLD_DXA_BMD_315 = 1591.5
+
+        self.MIN_VAL_DXA_MASK_DRR_43 = 0.
+        self.MAX_VAL_DXA_MASK_DRR_43 = 89.91797
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -241,12 +244,25 @@ class BMDModel(TrainingModelInt):
                                                         reduction=None, data_range=255.).sum()
 
             if self.log_bmd_pcc:
-                fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
-                fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
-                for i in range(B):
-                    inference_ai_list.append(
-                        self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
-                gt_bmds.append(data["DXABMD"].view(-1))
+                if self.binary:
+                    fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
+                    fake_masks_ = fake_drrs[:, 1, :, :].unsqueeze(1)
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
+                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+
+                    for i in range(B):
+                        inference_ai_list.append(
+                            self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i]))
+                    gt_bmds.append(data["CTBMD"].view(-1))
+                else:
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                    for i in range(B):
+                        inference_ai_list.append(
+                            self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
+                    gt_bmds.append(data["DXABMD"].view(-1))
             total_count += B
 
         psnr /= total_count
@@ -264,7 +280,7 @@ class BMDModel(TrainingModelInt):
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC(AVG)"] = pcc
+            ret["BMD_PCC_AVG"] = pcc
         return ret
 
     @torch.no_grad()
@@ -339,6 +355,13 @@ class BMDModel(TrainingModelInt):
             if isinstance(image, torch.Tensor):
                 return torch.tensor(0, dtype=image.dtype, device=image.device)
             return 0.
+        numerator = (image * mask).sum()
+        return numerator / area
+
+    @staticmethod
+    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor
+                                         ) -> float | np.ndarray | torch.Tensor:
+        area = mask.sum()
         numerator = (image * mask).sum()
         return numerator / area
 

@@ -208,7 +208,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             df_case_name = case_name.split('_')[1] + '_' + case_name.split('_')[2]
-            self.bmd_pool.append(self.bmd_df.loc[df_case_name, 'DXABMD'])
+            self.bmd_pool.append(self.bmd_df.loc[df_case_name, 'CT-vBMD'])
 
             xp_dao = MetaImageDAO(df_case_name, image_path=case_xp_dir)
             drr_dao = MetaImageDAO(df_case_name, image_path=case_drr_dir)
@@ -262,7 +262,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         return self.__getitem__(idx)
 
     def __getitem__(self, idx):
-        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
+        ct_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_dao, drr_dao, mask_dao = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
         if self.preload:
             xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
@@ -276,7 +276,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
         return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
-                "case_name": case_name, "DXABMD": dxa_bmd}
+                "case_name": case_name, "CTBMD": ct_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

@@ -173,7 +173,7 @@ def task2(case_name, fold):
     inference_ai_list.append(
         calc_average_intensity_with_mask(fake_drr_, mask_drr_))
 
-    gt_bmds.append(bmd_df.loc[df_case_name, 'DXABMD'])
+    gt_bmds.append(bmd_df.loc[df_case_name, 'CT-vBMD'])
 
     psnr += PSNR(fake_drr_normal, gt_drr_normal)
     ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),

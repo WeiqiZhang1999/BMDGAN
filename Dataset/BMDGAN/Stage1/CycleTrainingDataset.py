@@ -102,8 +102,8 @@ class LumbarCycleTrainingDataset(Dataset):
 
     def __getitem__(self, idx):
         xp_path = self.xp_pool[idx]
-
-        index_B = random.randint(0, len(self.drr_pool) - 1)
+        np.random.seed(42)
+        index_B = np.random.randint(0, len(self.drr_pool) - 1)
         drr_path, mask_path = self.drr_pool[index_B], self.mask_pool[index_B]
 
         xp = self._load_image(xp_path, self.load_size)

@@ -29,7 +29,7 @@ class BaseBMDGAN(nn.Module):
                                                   norm_type=norm_type,
                                                   padding_type="reflect")
 
-        self.fuse = MultiscaleClassificationHead(input_nc=sum(self.encoders.output_ncs),
+        self.fuse = MultiscaleClassificationHead(input_nc=sum(self.encoder.output_ncs),
                                                  output_nc=self.median_chanels,
                                                  norm_type=norm_type,
                                                  padding_type="reflect")

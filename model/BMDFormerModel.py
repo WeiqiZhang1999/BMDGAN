@@ -362,7 +362,7 @@ class BMDFormerModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            slice_ids = data["slice_id"]
+            # slice_ids = data["slice_id"]
             # fake_drrs = self.netG_up(self.transformer(self.netG_fus(self.netG_enc(xps)))).cpu().numpy()
             fake_drrs = self.features_forword(xps).cpu().numpy()
 
@@ -370,11 +370,11 @@ class BMDFormerModelInference(InferenceModelInt):
             for i in range(B):
                 fake_drr = fake_drrs[i]  # (1, H, W)
                 case_name = case_names[i]
-                slice_id = slice_ids[i]
+                # slice_id = slice_ids[i]
                 space = spaces[i]
-                save_dir = OSHelper.path_join(output_dir, "fake_drr", case_name)
+                save_dir = OSHelper.path_join(output_dir, "fake_drr")
                 OSHelper.mkdirs(save_dir)
-                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{slice_id}.mhd"),
+                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
                                       fake_drr,
                                       space,
                                       compress=True)

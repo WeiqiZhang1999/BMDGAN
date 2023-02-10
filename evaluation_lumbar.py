@@ -93,9 +93,12 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     # for case_name in case_name_list:
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 36.74824
+
+    MIN_VAL_DXA_DRR_43 = 0.
+    MAX_VAL_DXA_DRR_43 = 36.75209
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/bmdformer_lumbar/inference_stage1_e630/output'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/bmdformer_lumbar/inference_direct_lat_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -113,17 +116,17 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     gt_drr_normal = denormal(gt_drr)
 
     # PCC
-    fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
-    fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
+    fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_43, MAX_VAL_DXA_DRR_43)
+    fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_43, MAX_VAL_DXA_DRR_43)
 
     inference_ai_list.append(
         calc_average_intensity_with_th(fake_drr_, THRESHOLD_DXA_BMD_315))
 
     gt_bmds.append(bmd_df.loc[df_case_name, 'DXABMD'])
 
-    psnr += PSNR(fake_drr_normal, gt_drr_normal)
-    ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                  data_range=255.0, multichannel=True)
+    # psnr += PSNR(fake_drr_normal, gt_drr_normal)
+    # ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
+    #                               data_range=255.0, multichannel=True)
     total_count += 1
 
     return [psnr, ssim, inference_ai_list, gt_bmds, total_count]
@@ -137,11 +140,11 @@ def task2(case_name, fold):
     total_count = 0.
     # for case_name in case_name_list:
     # AP
-    MIN_VAL_DXA_DRR_315 = 0.
-    MAX_VAL_DXA_DRR_315 = 36.74824
+    MIN_VAL_DXA_DRR_43 = 0.
+    MAX_VAL_DXA_DRR_43 = 36.74824
 
-    MIN_VAL_DXA_MASK_DRR_315 = 0.
-    MAX_VAL_DXA_MASK_DRR_315 = 91.80859
+    MIN_VAL_DXA_MASK_DRR_43 = 0.
+    MAX_VAL_DXA_MASK_DRR_43 = 91.80859
     # LAT
     MIN_VAL_DXA_DRR_43 = 0.
     MAX_VAL_DXA_DRR_43 = 36.75209
@@ -170,11 +173,11 @@ def task2(case_name, fold):
     # gt_drr_normal = denormal(gt_drr)
 
     # PCC
-    fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
-    fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
+    fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_43, MAX_VAL_DXA_DRR_43)
+    fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_43, MAX_VAL_DXA_DRR_43)
 
-    mask_drr_ = denormal(mask_drr, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
-    mask_drr_ = np.clip(mask_drr_, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
+    mask_drr_ = denormal(mask_drr, MIN_VAL_DXA_MASK_DRR_43, MAX_VAL_DXA_MASK_DRR_43)
+    mask_drr_ = np.clip(mask_drr_, MIN_VAL_DXA_MASK_DRR_43, MAX_VAL_DXA_MASK_DRR_43)
 
     inference_ai_list.append(
         calc_average_intensity_with_mask(fake_drr_, mask_drr_))
@@ -216,7 +219,7 @@ def main():
             if case_name.split('.')[-1] == 'mhd':
                 #     args.append((case_name, fold))
                 final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
-                final2.append(task2(case_name, fold))
+                # final2.append(task2(case_name, fold))
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",

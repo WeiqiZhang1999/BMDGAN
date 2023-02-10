@@ -96,7 +96,6 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/bmdformer_lumbar/inference_stage1_e1270/output'
-    print(fake_path_pre)
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -137,11 +136,17 @@ def task2(case_name, fold):
     gt_bmds = []
     total_count = 0.
     # for case_name in case_name_list:
+    # AP
     MIN_VAL_DXA_DRR_315 = 0.
     MAX_VAL_DXA_DRR_315 = 36.74824
 
     MIN_VAL_DXA_MASK_DRR_315 = 0.
     MAX_VAL_DXA_MASK_DRR_315 = 91.80859
+    # LAT
+    MIN_VAL_DXA_DRR_43 = 0.
+    MAX_VAL_DXA_DRR_43 = 36.75209
+    MIN_VAL_DXA_MASK_DRR_43 = 0.
+    MAX_VAL_DXA_MASK_DRR_43 = 89.91797
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
     # gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
     fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_new_mask_e1270/output'
@@ -198,7 +203,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 1e-6
+    THRESHOLD_DXA_BMD_315 = 1e-7
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 

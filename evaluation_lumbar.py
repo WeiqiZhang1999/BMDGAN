@@ -148,20 +148,16 @@ def task2(case_name, fold):
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
     fake_path = os.path.join(fake_path_pre, fold, 'fake_drr')
-    # mask_drr_path = os.path.join(fake_path_pre, fold, 'fake_mask_drr')
+    mask_drr_path = os.path.join(fake_path_pre, fold, 'fake_mask_drr')
 
     df_case_name = case_name.split('.')[0]
 
     fake_drr_path = os.path.join(fake_path, f'{df_case_name}.mhd')
-    # mask_drr_root = os.path.join(mask_drr_path, f'{df_case_name}.mhd')
+    mask_drr_root = os.path.join(mask_drr_path, f'{df_case_name}.mhd')
     # gt_drr_path = os.path.join(gt_path, f'DRR_{df_case_name}_AP_Ensembles.mhd')
-    # 2
-    fake_drr_mask, _ = MetaImageHelper.read(fake_drr_path)
-    fake_drr = fake_drr_mask[0]
-    mask_drr = fake_drr_mask[1]
-    # fake_drr, _ = MetaImageHelper.read(fake_drr_path)
 
-    # mask_drr, _ = MetaImageHelper.read(mask_drr_root)
+    fake_drr, _ = MetaImageHelper.read(fake_drr_path)
+    mask_drr, _ = MetaImageHelper.read(mask_drr_root)
     # gt_drr, _ = load_image(gt_drr_path, [512, 256])
 
     # fake_drr_normal = denormal(fake_drr)

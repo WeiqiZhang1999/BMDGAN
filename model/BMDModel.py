@@ -472,24 +472,24 @@ class LumbarBMDModelInference(InferenceModelInt):
             B = xps.shape[0]
             if self.binary:
                 for i in range(B):
-                    fake_drr_with_mask = fake_drrs[i]  # (2, H, W)
-                    fake_drr = fake_drr_with_mask[0].unsqueeze(0).numpy()
-                    fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0).numpy()
+                    fake_drr_with_mask = fake_drrs[i].numpy()  # (2, H, W)
+                    # fake_drr = fake_drr_with_mask[0].unsqueeze(0).numpy()
+                    # fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0).numpy()
                     case_name = case_names[i]
                     space = spaces[i]
                     save_dir = OSHelper.path_join(output_dir, "fake_drr")
                     OSHelper.mkdirs(save_dir)
                     MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
-                                          fake_drr,
+                                          fake_drr_with_mask,
                                           space,
                                           compress=True)
 
-                    save_mask_dir = OSHelper.path_join(output_dir, "fake_mask_drr")
-                    OSHelper.mkdirs(save_mask_dir)
-                    MetaImageHelper.write(OSHelper.path_join(save_mask_dir, f"{case_name}.mhd"),
-                                          fake_mask_drr,
-                                          space,
-                                          compress=True)
+                    # save_mask_dir = OSHelper.path_join(output_dir, "fake_mask_drr")
+                    # OSHelper.mkdirs(save_mask_dir)
+                    # MetaImageHelper.write(OSHelper.path_join(save_mask_dir, f"{case_name}.mhd"),
+                    #                       fake_mask_drr,
+                    #                       space,
+                    #                       compress=True)
             else:
                 for i in range(B):
                     fake_drr = fake_drrs[i]  # (1, H, W)

@@ -122,8 +122,8 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     gt_bmds.append(bmd_df.loc[df_case_name, 'DXABMD'])
 
     psnr += PSNR(fake_drr_normal, gt_drr_normal)
-    ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                  data_range=255.0, multichannel=True)
+    # ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
+    #                               data_range=255.0, multichannel=True)
     total_count += 1
 
     return [psnr, ssim, inference_ai_list, gt_bmds, total_count]

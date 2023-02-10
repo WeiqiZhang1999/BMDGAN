@@ -142,8 +142,8 @@ def task2(case_name, fold):
     MIN_VAL_DXA_MASK_DRR_315 = 0.
     MAX_VAL_DXA_MASK_DRR_315 = 91.80859
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
-    gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_new_mask_e1270/output'
+    # gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_new_mask_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -154,14 +154,14 @@ def task2(case_name, fold):
 
     fake_drr_path = os.path.join(fake_path, f'{df_case_name}.mhd')
     mask_drr_root = os.path.join(mask_drr_path, f'{df_case_name}.mhd')
-    gt_drr_path = os.path.join(gt_path, f'DRR_{df_case_name}_AP_Ensembles.mhd')
+    # gt_drr_path = os.path.join(gt_path, f'DRR_{df_case_name}_AP_Ensembles.mhd')
 
     fake_drr, _ = MetaImageHelper.read(fake_drr_path)
     mask_drr, _ = MetaImageHelper.read(mask_drr_root)
-    gt_drr, _ = load_image(gt_drr_path, [512, 256])
+    # gt_drr, _ = load_image(gt_drr_path, [512, 256])
 
-    fake_drr_normal = denormal(fake_drr)
-    gt_drr_normal = denormal(gt_drr)
+    # fake_drr_normal = denormal(fake_drr)
+    # gt_drr_normal = denormal(gt_drr)
 
     # PCC
     fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
@@ -175,9 +175,9 @@ def task2(case_name, fold):
 
     gt_bmds.append(bmd_df.loc[df_case_name, 'CT-vBMD'])
 
-    psnr += PSNR(fake_drr_normal, gt_drr_normal)
-    ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
-                                  data_range=255.0, multichannel=True)
+    # psnr += PSNR(fake_drr_normal, gt_drr_normal)
+    # ssim += structural_similarity(fake_drr_normal.transpose(1, 2, 0), gt_drr_normal.transpose(1, 2, 0),
+    #                               data_range=255.0, multichannel=True)
     total_count += 1
 
     return [psnr, ssim, inference_ai_list, gt_bmds, total_count]

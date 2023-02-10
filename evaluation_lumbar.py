@@ -95,7 +95,7 @@ def task1(case_name, fold, THRESHOLD_DXA_BMD_315):
     MAX_VAL_DXA_DRR_315 = 36.74824
     # THRESHOLD_DXA_BMD_315 = 1.
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/bmdformer_lumbar/inference_stage1_e1270/output'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/bmdformer_lumbar/inference_stage1_e630/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -203,7 +203,7 @@ def main():
     fold_list = os.listdir(fake_path)
 
     args = []
-    THRESHOLD_DXA_BMD_315 = 1e-7
+    THRESHOLD_DXA_BMD_315 = 5e-5
     # THRESHOLD_DXA_BMD_315_list = np.linspace(0, 10, 1000, dtype=np.float32)
     # THRESHOLD_DXA_BMD_315_list = [0.1, 0.5, 1.0]
 

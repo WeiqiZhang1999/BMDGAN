@@ -219,7 +219,7 @@ def main():
             if case_name.split('.')[-1] == 'mhd':
                 #     args.append((case_name, fold))
                 final1.append(task1(case_name, fold, THRESHOLD_DXA_BMD_315))
-                # final2.append(task2(case_name, fold))
+                final2.append(task2(case_name, fold))
 
         # if args_.stage == 1:
         #     result = MultiProcessingHelper().run(args=args, func=task1, n_workers=args_.num_workers, desc="task",

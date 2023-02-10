@@ -143,7 +143,7 @@ def task2(case_name, fold):
     MAX_VAL_DXA_MASK_DRR_315 = 91.80859
     # THRESHOLD_DXA_BMD_315_list = np.linspace(1, 1500, 100, dtype=np.float64)
     gt_path = r'/win/salmon/user/zhangwq/data/20230128_Lumbar_DRRs_perspective_uncalibrated_AP_ensembles'
-    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_new_mask_e630/output'
+    fake_path_pre = r'/win/salmon/user/zhangwq/BMD_projects/workspace/lumbar_test/inference_direct_new_mask_e1270/output'
     bmd_path = r'/win/salmon/user/zhangwq/data/Spine_data_for_AI_celan_20230119.xlsx'
     bmd_df = pd.read_excel(bmd_path, index_col=0)
     bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
@@ -167,7 +167,7 @@ def task2(case_name, fold):
     fake_drr_ = denormal(fake_drr, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
     fake_drr_ = np.clip(fake_drr_, MIN_VAL_DXA_DRR_315, MAX_VAL_DXA_DRR_315)
 
-    mask_drr_ = denormal(fake_drr, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
+    mask_drr_ = denormal(mask_drr, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
     mask_drr_ = np.clip(mask_drr_, MIN_VAL_DXA_MASK_DRR_315, MAX_VAL_DXA_MASK_DRR_315)
 
     inference_ai_list.append(

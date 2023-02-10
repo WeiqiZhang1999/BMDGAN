@@ -313,9 +313,9 @@ class BMDModel(TrainingModelInt):
             ret[key] = torch.tile(val, dims=(1, 3, 1, 1))  # (N, 3, H, W)
         return ret
 
-    def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
-        if resume:
-            assert strict == True
+    def load_model(self, load_dir: AnyStr, prefix="ckp", strict=False, resume=True):
+        # if resume:
+        #     assert strict == True
 
         for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
             net = getattr(self, signature)

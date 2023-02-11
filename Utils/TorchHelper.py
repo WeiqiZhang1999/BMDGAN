@@ -79,6 +79,7 @@ class TorchHelper:
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
         elif policy == "linear":
             decay_epoch = config["decay_epoch"]
+
             def lambda_rule(epoch):
                 lr_l = 1.0 - max(0, epoch - decay_epoch) / float(epochs - decay_epoch + 1)
                 return lr_l
@@ -89,18 +90,14 @@ class TorchHelper:
                                                                  T_0=10,
                                                                  T_mult=2)
         elif policy == "custom_cosine_warm":
-            if epochs <= 600:
-                scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                                     T_0=600,
-                                                                     T_mult=2,
-                                                                     eta_min=1e-7)
-            else:
-                scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
+            milestones = config["milestones"]
+            scheduler = lr_scheduler.SequentialLR(optimizer,
+                                                  schedulers=[lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                                                       T_0=milestones,
+                                                                                                       T_mult=2),
+                                                              lr_scheduler.LambdaLR(optimizer,
+                                                                                    lr_lambda=lambda x: 1.0)],
+                                                  milestones=[milestones])
         else:
             return NotImplementedError('learning rate policy [%s] is not implemented', policy)
         return scheduler
-
-
-
-
-

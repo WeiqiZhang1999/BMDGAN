@@ -97,7 +97,7 @@ class TorchHelper:
                                                                                                        T_mult=2,
                                                                                                        eta_min=1e-7),
                                                               lr_scheduler.LambdaLR(optimizer,
-                                                                                    lr_lambda=lambda x: 1.0)],
+                                                                                    lambda epoch: 1e-7)],
                                                   milestones=[milestones])
         else:
             return NotImplementedError('learning rate policy [%s] is not implemented', policy)

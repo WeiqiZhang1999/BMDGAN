@@ -265,7 +265,7 @@ class BMDModel(TrainingModelInt):
                     fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
                     for i in range(B):
                         inference_ai_list.append(
-                            self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
+                            self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_43))
                     gt_bmds.append(data["DXABMD"].view(-1))
             total_count += B
 

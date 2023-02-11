@@ -261,8 +261,8 @@ class BMDModel(TrainingModelInt):
                             self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i]))
                     gt_bmds.append(data["CTBMD"].view(-1))
                 else:
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
                     for i in range(B):
                         inference_ai_list.append(
                             self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))

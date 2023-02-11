@@ -94,9 +94,10 @@ class TorchHelper:
             scheduler = lr_scheduler.SequentialLR(optimizer,
                                                   schedulers=[lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
                                                                                                        T_0=milestones,
-                                                                                                       T_mult=2),
+                                                                                                       T_mult=2,
+                                                                                                       eta_min=1e-7),
                                                               lr_scheduler.LambdaLR(optimizer,
-                                                                                    lr_lambda=lambda x: 1.0)],
+                                                                                    lr_lambda=lambda x: 1e-7)],
                                                   milestones=[milestones])
         else:
             return NotImplementedError('learning rate policy [%s] is not implemented', policy)

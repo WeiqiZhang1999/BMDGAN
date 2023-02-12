@@ -268,10 +268,10 @@ class CustomRegressionBMDModel(TrainingModelInt):
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
         # self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
-        # self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
-        # self.linear = nn.Sequential(torch.nn.Linear(256, 256), torch.nn.Linear(256, 1))
-        # self.head = nn.Sequential(self.norm, self.linear).to(self.device)
-        self.head = FCRegressionHead(256, 1, [128, 64]).to(self.device)
+        self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
+        self.linear = torch.nn.Linear(256, 1)
+        self.head = nn.Sequential(self.norm, self.linear).to(self.device)
+        # self.head = FCRegressionHead(256, 1, [128, 64]).to(self.device)
 
         if self.rank == 0:
             pass
@@ -295,7 +295,7 @@ class CustomRegressionBMDModel(TrainingModelInt):
 
     def features_forword(self, x):
         x = self.netG_fus(self.netG_enc(x))
-        x = self.head(x)
+        x = self.head(x.mean([-2, -1]))
         return x
 
     def __compute_loss(self, data):

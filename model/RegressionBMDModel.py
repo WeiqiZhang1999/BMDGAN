@@ -132,7 +132,7 @@ class RegressionBMDModel(TrainingModelInt):
         for data in iterator:
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
-            gt_bmds = data["CTvBMD"]
+            gt_bmds = data["CTvBMD"].to(self.device)
             predict_bmds = self.features_forword(xps)
             mse += mse_metric(predict_bmds, gt_bmds)
             rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds))

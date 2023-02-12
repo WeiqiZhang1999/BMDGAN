@@ -77,10 +77,10 @@ class RegressionBMDModel(TrainingModelInt):
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
-        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.module.parameters(),
-                                                        self.netG_fus.module.parameters(),
-                                                        self.transformer.module.parameters(),
-                                                        self.head.module.parameters()),
+        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.parameters(),
+                                                        self.netG_fus.parameters(),
+                                                        self.transformer.parameters(),
+                                                        self.head.parameters()),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer]
@@ -155,7 +155,7 @@ class RegressionBMDModel(TrainingModelInt):
         for signature in ["netG_fus", "netG_enc"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            TorchHelper.load_network_by_path(net, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
@@ -163,18 +163,18 @@ class RegressionBMDModel(TrainingModelInt):
         for signature in ["head", "netG_fus", "netG_enc", "transformer"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
-            torch.save(net.module.state_dict(), save_path)
+            torch.save(net.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):
         if train:
             for signature in ["head", "netG_fus", "netG_enc", "transformer"]:
                 net = getattr(self, signature)
-                net.module.train()
+                net.train()
         else:
             for signature in ["head", "netG_fus", "netG_enc", "transformer"]:
                 net = getattr(self, signature)
-                net.module.eval()
+                net.eval()
 
     def on_train_batch_end(self, *args, **kwargs):
         pass

@@ -337,7 +337,7 @@ class FlowTransformerBlocks(nn.Module):
 
         x = self.norm(x)  # B L C
         # x = self.patch_unembed(x, x_size)
-        x = x.mean(x)
+        x = x.mean(dim=1)
 
         return x
 

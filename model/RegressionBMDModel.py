@@ -139,7 +139,7 @@ class RegressionBMDModel(TrainingModelInt):
 
         inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
         gt_bmds = torch.cat(gt_bmds).cpu().numpy()
-        pcc = pearsonr(gt_bmds, inference_ai_list)[0]
+        pcc += pearsonr(gt_bmds, inference_ai_list)[0]
         # if DDPHelper.is_initialized():
         #     DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
         ret["BMD_PCC_AVG"] = pcc

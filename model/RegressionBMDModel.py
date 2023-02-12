@@ -21,6 +21,7 @@ from Network.model.Transformer import TransformerBlocks, FlowTransformerBlocks
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Utils.ImageHelper import ImageHelper
+from Network.model.ModelHead.FCRegressionHead import FCRegressionHead
 from scipy.stats import pearsonr
 import torch.nn as nn
 import math
@@ -265,18 +266,18 @@ class CustomRegressionBMDModel(TrainingModelInt):
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
         # self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
-        self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
-        self.linear = nn.Sequential(torch.nn.Linear(256, 256), torch.nn.Linear(256, 1))
-        self.head = nn.Sequential(self.norm, self.linear).to(self.device)
-        # self.head = self.linear.to(self.device)
+        # self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
+        # self.linear = nn.Sequential(torch.nn.Linear(256, 256), torch.nn.Linear(256, 1))
+        # self.head = nn.Sequential(self.norm, self.linear).to(self.device)
+        self.head = FCRegressionHead(256, 1, [128, 64]).to(self.device)
 
         if self.rank == 0:
             # self.netG_enc.apply(weights_init)
             # self.netG_fus.apply(weights_init)
             self.head.apply(weights_init)
 
-        # self.crit = nn.L1Loss(reduction='mean').to(self.device)
-        self.crit = nn.MSELoss(reduction='mean').to(self.device)
+        self.crit = nn.L1Loss(reduction='mean').to(self.device)
+        # self.crit = nn.MSELoss(reduction='mean').to(self.device)
 
 
     def config_optimizer(self):

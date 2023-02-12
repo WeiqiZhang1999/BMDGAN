@@ -36,6 +36,7 @@ class RegressionBMDModel(TrainingModelInt):
     def __init__(self,
                  optimizer_config,
                  netG_enc_config,
+                 vit_config,
                  ):
 
         # self.rank = DDPHelper.rank()
@@ -52,12 +53,7 @@ class RegressionBMDModel(TrainingModelInt):
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
         # self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
-        self.transformer = SimpleViT(image_size=[128, 64],
-                                     patch_size=[16, 16],
-                                     dim=1024,
-                                     depth=6,
-                                     heads=16,
-                                     mlp_dim=2048)
+        self.transformer = SimpleViT(**vit_config).to(self.device)
         self.linear = torch.nn.Linear(1024, 1)
         self.head = nn.Sequential(nn.LayerNorm(1024), self.linear).to(self.device)
         # self.head = self.linear.to(self.device)

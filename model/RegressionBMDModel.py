@@ -20,13 +20,7 @@ from .TrainingModelInt import TrainingModelInt
 from Network.model.Transformer import TransformerBlocks, FlowTransformerBlocks
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
-from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
-from Network.model.Discriminators import MultiscaleDiscriminator
-from Network.Loss.GANLoss import LSGANLoss
-from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
 from Utils.ImageHelper import ImageHelper
-from torchmetrics.functional import structural_similarity_index_measure
-from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
 import torch.nn as nn
 import math
@@ -305,7 +299,7 @@ class CustomRegressionBMDModel(TrainingModelInt):
         xp = data["xp"].to(self.device)
         gt_bmd = data["CTvBMD"].to(self.device)
         predict_bmd = self.features_forword(xp)
-        g_loss = self.crit(predict_bmd, gt_bmd.view(-1))
+        g_loss = self.crit(predict_bmd.view, gt_bmd.view)
         log["L1_Loss"] = g_loss.detach()
         G_loss += g_loss
 
@@ -342,8 +336,8 @@ class CustomRegressionBMDModel(TrainingModelInt):
             B = xps.shape[0]
             gt_bmds = data["CTvBMD"].to(self.device)
             predict_bmds = self.features_forword(xps)
-            mse += mse_metric(predict_bmds, gt_bmds.view(-1))
-            rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds.view(-1)))
+            mse += mse_metric(predict_bmds, gt_bmds)
+            rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds))
             for i in range(B):
                 inference_ai_list.append(predict_bmds[i])
             gt_bmd_list.append(gt_bmds.view(-1))

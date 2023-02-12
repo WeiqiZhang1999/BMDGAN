@@ -136,9 +136,9 @@ class RegressionBMDModel(TrainingModelInt):
             predict_bmds = self.features_forword(xps)
             mse += mse_metric(predict_bmds, gt_bmds)
             rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds))
-            for i in range(B):
-                inference_ai_list.append(predict_bmds[i])
-                gt_bmd_list.append(gt_bmds[i].view(-1))
+            # for i in range(B):
+            inference_ai_list.append(predict_bmds.view(-1))
+            gt_bmd_list.append(gt_bmds.view(-1))
             total_count += B
 
         mse /= total_count

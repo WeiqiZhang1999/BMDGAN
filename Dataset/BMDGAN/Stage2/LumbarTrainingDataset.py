@@ -41,7 +41,7 @@ class LumbarTrainingDataset(Dataset):
                 self.transformer = ImageTransformer(**self.transformer_param_dict[aug_conf])
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_43_5_fold_new.json"), 'r') as f:
+        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_43_5_fold.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["train"]
 
         assert self.view == 'AP' or self.view == 'LAT', self.view

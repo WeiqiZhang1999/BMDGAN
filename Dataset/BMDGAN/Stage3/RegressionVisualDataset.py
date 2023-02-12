@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from .RegressionInferenceDataset import RegressionInferenceDataset
 import numpy as np
 
-class VisualDataset(Dataset):
+class RegressionVisualDataset(Dataset):
 
     def __init__(self, infer_dataset: RegressionInferenceDataset, batch_size=6, verbose=False):
         super().__init__()

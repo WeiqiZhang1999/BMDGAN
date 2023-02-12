@@ -18,6 +18,7 @@ from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 from Network.model.Transformer import TransformerBlocks, FlowTransformerBlocks
+from Network.model.ViT import SimpleViT
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Utils.ImageHelper import ImageHelper
@@ -50,10 +51,15 @@ class RegressionBMDModel(TrainingModelInt):
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
-        self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
-        # self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
-        self.linear = torch.nn.Linear((64 * (2 ** 2)), 1)
-        self.head = nn.Sequential(nn.LayerNorm(256), self.linear).to(self.device)
+        # self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
+        self.transformer = SimpleViT(image_size=[128, 64],
+                                     patch_size=[16, 8],
+                                     dim=1024,
+                                     depth=6,
+                                     heads=16,
+                                     mlp_dim=2048)
+        self.linear = torch.nn.Linear(1024, 1)
+        self.head = nn.Sequential(nn.LayerNorm(1024), self.linear).to(self.device)
         # self.head = self.linear.to(self.device)
 
         if self.rank == 0:
@@ -157,7 +163,7 @@ class RegressionBMDModel(TrainingModelInt):
         return ret
 
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
-        for signature in ["netG_fus", "netG_enc", "transformer"]:
+        for signature in ["netG_fus", "netG_enc"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net, load_path, strict=strict)

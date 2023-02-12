@@ -161,7 +161,7 @@ class RegressionBMDModel(TrainingModelInt):
         return ret
 
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
-        for signature in ["netG_fus", "netG_enc"]:
+        for signature in ["netG_fus", "netG_enc", "transformer"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net, load_path, strict=strict)

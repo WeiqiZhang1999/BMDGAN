@@ -95,7 +95,7 @@ class RegressionBMDModel(TrainingModelInt):
         xp = data["xp"].to(self.device)
         gt_bmd = data["CTvBMD"].to(self.device)
         predict_bmd = self.features_forword(xp)
-        g_loss = self.crit(predict_bmd, gt_bmd.view(-1))
+        g_loss = self.crit(predict_bmd, gt_bmd)
         log["L1_Loss"] = g_loss.detach()
         G_loss += g_loss
 

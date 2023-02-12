@@ -87,7 +87,7 @@ class RegressionBMDModel(TrainingModelInt):
 
     def features_forword(self, x):
         x = self.netG_fus(self.netG_enc(x))
-        x = self.transformer(x)
+        x = self.transformer(x) + x
         x = self.head(x.mean([-2, -1]))
         return x
 

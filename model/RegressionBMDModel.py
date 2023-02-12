@@ -53,8 +53,8 @@ class RegressionBMDModel(TrainingModelInt):
         self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
         # self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
         self.linear = torch.nn.Linear((64 * (2 ** 2)), 1)
-        # self.head = nn.Sequential(self.norm, self.linear).to(self.device)
-        self.head = self.linear.to(self.device)
+        self.head = nn.Sequential(nn.LayerNorm(256), self.linear).to(self.device)
+        # self.head = self.linear.to(self.device)
 
         if self.rank == 0:
             # self.netG_enc.apply(weights_init)

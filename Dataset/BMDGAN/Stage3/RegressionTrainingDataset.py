@@ -24,7 +24,7 @@ import json
 import pandas as pd
 
 
-class ResgressionTrainingDataset(Dataset):
+class RegressionTrainingDataset(Dataset):
 
     def __init__(self,
                  split_fold: int | str,

@@ -97,7 +97,7 @@ class RegressionBMDModel(TrainingModelInt):
         xp = data["xp"].to(self.device)
         gt_bmd = data["CTvBMD"].to(self.device)
         predict_bmd = self.features_forword(xp)
-        g_loss = self.crit(predict_bmd, gt_bmd)
+        g_loss = self.crit(predict_bmd, gt_bmd.view(-1))
         log["L1_Loss"] = g_loss.detach()
         G_loss += g_loss
 
@@ -134,10 +134,10 @@ class RegressionBMDModel(TrainingModelInt):
             B = xps.shape[0]
             gt_bmds = data["CTvBMD"].to(self.device)
             predict_bmds = self.features_forword(xps)
-            mse += mse_metric(predict_bmds, gt_bmds)
-            rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds))
-            # for i in range(B):
-            inference_ai_list.append(predict_bmds.view(-1))
+            mse += mse_metric(predict_bmds, gt_bmds.view(-1))
+            rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds.view(-1)))
+            for i in range(B):
+                inference_ai_list.append(predict_bmds[i])
             gt_bmd_list.append(gt_bmds.view(-1))
             total_count += B
 

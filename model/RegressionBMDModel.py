@@ -61,8 +61,8 @@ class RegressionBMDModel(TrainingModelInt):
         self.head = nn.Sequential(self.norm, self.linear).to(self.device)
 
         if self.rank == 0:
-            self.netG_enc.apply(weights_init)
-            self.netG_fus.apply(weights_init)
+            # self.netG_enc.apply(weights_init)
+            # self.netG_fus.apply(weights_init)
             self.head.apply(weights_init)
 
         # Wrap DDP
@@ -151,7 +151,7 @@ class RegressionBMDModel(TrainingModelInt):
         pcc += pearsonr(gt_bmds, inference_ai_list)[0]
         # if DDPHelper.is_initialized():
         #     DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-        ret["BMD_PCC_AVG"] = pcc
+        ret["BMD_PCC"] = pcc
         return ret
 
     @torch.no_grad()

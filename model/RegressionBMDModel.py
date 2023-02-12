@@ -53,7 +53,7 @@ class RegressionBMDModel(TrainingModelInt):
                                                      padding_type="reflect").to(self.device)
         # self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
         self.transformer = SimpleViT(image_size=[128, 64],
-                                     patch_size=[16, 8],
+                                     patch_size=[16, 16],
                                      dim=1024,
                                      depth=6,
                                      heads=16,

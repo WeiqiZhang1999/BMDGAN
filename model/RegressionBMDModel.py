@@ -71,7 +71,7 @@ class RegressionBMDModel(TrainingModelInt):
         # self.transformer = DDPHelper.shell_ddp(self.transformer)
         # self.head = DDPHelper.shell_ddp(self.head)
 
-        self.crit = nn.L1Loss().to(self.device)
+        self.crit = nn.L1Loss(reduction='mean').to(self.device)
 
 
     def config_optimizer(self):
@@ -115,10 +115,14 @@ class RegressionBMDModel(TrainingModelInt):
 
     @torch.no_grad()
     def eval_epoch(self, dataloader, desc):
-
+        total_count = 0.
         pcc = torch.tensor([0.]).to(self.device)
+        mse = torch.tensor([0.]).to(self.device)
+        rmse = torch.tensor([0.]).to(self.device)
         inference_ai_list = []
-        gt_bmds = []
+        gt_bmd_list = []
+
+        mse_metric = nn.MSELoss(reduction="mean").to(self.device)
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -128,17 +132,22 @@ class RegressionBMDModel(TrainingModelInt):
         for data in iterator:
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
-
-            predict_bmd = self.features_forword(xps)
-
+            gt_bmds = data["CTvBMD"]
+            predict_bmds = self.features_forword(xps)
+            mse += mse_metric(predict_bmds, gt_bmds)
+            rmse += torch.sqrt(mse_metric(predict_bmds, gt_bmds))
             for i in range(B):
-                inference_ai_list.append(predict_bmd[i])
-            gt_bmds.append(data["CTvBMD"].view(-1))
+                inference_ai_list.append(predict_bmds[i])
+                gt_bmd_list.append(gt_bmds[i].view(-1))
+            total_count += B
 
-        ret = {}
+        mse /= total_count
+        rmse /= total_count
+        ret = {"MSE": mse.cpu().numpy(),
+               "RMSE": rmse.cpu().numpy(),}
 
         inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
-        gt_bmds = torch.cat(gt_bmds).cpu().numpy()
+        gt_bmds = torch.cat(gt_bmd_list).cpu().numpy()
         pcc += pearsonr(gt_bmds, inference_ai_list)[0]
         # if DDPHelper.is_initialized():
         #     DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)

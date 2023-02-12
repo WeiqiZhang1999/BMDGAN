@@ -275,7 +275,8 @@ class CustomRegressionBMDModel(TrainingModelInt):
             # self.netG_fus.apply(weights_init)
             self.head.apply(weights_init)
 
-        self.crit = nn.L1Loss(reduction='mean').to(self.device)
+        # self.crit = nn.L1Loss(reduction='mean').to(self.device)
+        self.crit = nn.MSELoss(reduction='mean').to(self.device)
 
 
     def config_optimizer(self):

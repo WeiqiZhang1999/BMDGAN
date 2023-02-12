@@ -269,7 +269,7 @@ class CustomRegressionBMDModel(TrainingModelInt):
         # self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
         # self.linear = nn.Sequential(torch.nn.Linear(256, 256), torch.nn.Linear(256, 1))
         # self.head = nn.Sequential(self.norm, self.linear).to(self.device)
-        self.head = FCRegressionHead(256, 1, [128, 64]).to(self.device)
+        self.head = FCRegressionHead(256, 1, [8, 4]).to(self.device)
 
         if self.rank == 0:
             pass

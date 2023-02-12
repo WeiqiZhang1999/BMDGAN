@@ -272,9 +272,10 @@ class CustomRegressionBMDModel(TrainingModelInt):
         self.head = FCRegressionHead(256, 1, [128, 64]).to(self.device)
 
         if self.rank == 0:
+            pass
             # self.netG_enc.apply(weights_init)
             # self.netG_fus.apply(weights_init)
-            self.head.apply(weights_init)
+            # self.head.apply(weights_init)
 
         self.crit = nn.L1Loss(reduction='mean').to(self.device)
         # self.crit = nn.MSELoss(reduction='mean').to(self.device)

@@ -230,19 +230,37 @@ class ViTRegressionBMDModelInference(InferenceModelInt):
                             total=len(data_module.inference_dataloader),
                             mininterval=60, maxinterval=180, )
 
+        gt_list = []
+        fake_list = []
+        name_list = []
+
         for data in iterator:
             xps = data["xp"].to(self.device)
-            spaces = data["spacing"].numpy()
+            gt_bmds = data["CTvBMD"].numpy()
             case_names = data["case_name"]
             predicted_bmds = self.features_forword(xps).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):
                 case_name = case_names[i]
-                space = spaces[i]
+                gt_bmd = gt_bmds[i]
                 predicted_bmd = predicted_bmds[i]
-                save_dir = OSHelper.path_join(output_dir, "results")
-                OSHelper.mkdirs(save_dir)
+
+                name_list.append(case_name)
+                gt_list.append(gt_bmd)
+                fake_list.append(predicted_bmd)
+
+                # save_dir = OSHelper.path_join(output_dir, "results")
+
+        results = {"case_name": name_list,
+                   "GTBMD": gt_list,
+                   "FakeBMD": fake_list
+                   }
+
+        data = pd.DataFrame(results)
+
+        save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
+        data.to_excel(save_dir)
 
 
 class CustomRegressionBMDModel(TrainingModelInt):
@@ -443,7 +461,7 @@ class CustomRegressionBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             gt_bmds = data["CTvBMD"].numpy()
             case_names = data["case_name"]
-            predicted_bmds = self.features_forword(xps).cpu().numpy()
+            predicted_bmds = self.features_forword(xps).cpu().numpy().view(-1)
 
             B = xps.shape[0]
             for i in range(B):

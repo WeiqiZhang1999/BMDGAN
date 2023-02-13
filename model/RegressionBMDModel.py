@@ -490,9 +490,12 @@ class CustomRegressionBMDModelInference(InferenceModelInt):
         output_dir = OSHelper.path_join(base_dir, f"e{self.epoch}")
         OSHelper.mkdirs(base_dir)
         df_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
-        previous_df = pd.read_excel(df_dir, index_col=0)
-        results_df = pd.concat([previous_df, data])
-        results_df.to_excel(df_dir)
+        if OSHelper.path_exists(df_dir):
+            previous_df = pd.read_excel(df_dir, index_col=0)
+            results_df = pd.concat([previous_df, data])
+            results_df.to_excel(df_dir)
+        else:
+            data.to_excel(df_dir)
 
 
 def weights_init(m):

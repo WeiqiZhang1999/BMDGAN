@@ -14,6 +14,7 @@ from typing import AnyStr
 from Utils.TorchHelper import TorchHelper
 from tqdm import tqdm
 import numpy as np
+from Network.Loss.BMCLoss import BMCLoss
 from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
@@ -38,6 +39,8 @@ class RegressionBMDModel(TrainingModelInt):
                  optimizer_config,
                  netG_enc_config,
                  vit_config,
+                 init_noise_sigma=0.,
+                 sigma_lr=1e-2,
                  ):
 
         # self.rank = DDPHelper.rank()
@@ -45,6 +48,11 @@ class RegressionBMDModel(TrainingModelInt):
         # self.device = torch.device(self.local_rank)
         self.device = 'cuda'
         self.rank = 0
+
+        # Use BMC Loss
+        if init_noise_sigma > 0.:
+            self.init_noise_sigma = init_noise_sigma
+            self.sigma_lr = sigma_lr
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -71,6 +79,8 @@ class RegressionBMDModel(TrainingModelInt):
         # self.head = DDPHelper.shell_ddp(self.head)
 
         self.crit = nn.L1Loss(reduction='mean').to(self.device)
+        if self.init_noise_sigma > 0.:
+            self.crit_bmc = BMCLoss(init_noise_sigma)
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -80,6 +90,8 @@ class RegressionBMDModel(TrainingModelInt):
                                                         self.transformer.parameters(),
                                                         self.head.parameters()),
                                         **self.optimizer_config)
+        if self.init_noise_sigma > 0.:
+            self.netG_optimizer.add_param_group({'params': self.crit_bmc.noise_sigma, 'lr': self.sigma_lr, 'name': 'noise_sigma'})
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer]
 
@@ -95,8 +107,12 @@ class RegressionBMDModel(TrainingModelInt):
         xp = data["xp"].to(self.device)
         gt_bmd = data["CTvBMD"].to(self.device)
         predict_bmd = self.features_forword(xp)
-        g_loss = self.crit(predict_bmd, gt_bmd)
-        log["L1_Loss"] = g_loss.detach()
+        if self.init_noise_sigma > 0.:
+            g_loss = self.crit_bmc(predict_bmd, gt_bmd)
+            log["BMC_Loss"] = g_loss.detach()
+        else:
+            g_loss = self.crit(predict_bmd, gt_bmd)
+            log["L1_Loss"] = g_loss.detach()
         G_loss += g_loss
 
         return G_loss, log

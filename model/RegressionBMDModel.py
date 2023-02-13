@@ -488,7 +488,7 @@ class CustomRegressionBMDModelInference(InferenceModelInt):
         base_dir = OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\regression_test"
                                         r"\inference_base\output")
         output_dir = OSHelper.path_join(base_dir, f"e{self.epoch}")
-        OSHelper.mkdirs(base_dir)
+        OSHelper.mkdirs(output_dir)
         df_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
         if OSHelper.path_exists(df_dir):
             previous_df = pd.read_excel(df_dir, index_col=0)

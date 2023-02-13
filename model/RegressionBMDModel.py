@@ -50,8 +50,8 @@ class RegressionBMDModel(TrainingModelInt):
         self.rank = 0
 
         # Use BMC Loss
-        if init_noise_sigma > 0.:
-            self.init_noise_sigma = init_noise_sigma
+        self.init_noise_sigma = init_noise_sigma
+        if self.init_noise_sigma > 0.:
             self.sigma_lr = sigma_lr
 
         # Prepare models

@@ -461,7 +461,7 @@ class CustomRegressionBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             gt_bmds = data["CTvBMD"].numpy()
             case_names = data["case_name"]
-            predicted_bmds = self.features_forword(xps).cpu().numpy().view(-1)
+            predicted_bmds = self.features_forword(xps).view(-1).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):

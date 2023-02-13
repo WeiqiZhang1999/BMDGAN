@@ -80,7 +80,7 @@ class RegressionBMDModel(TrainingModelInt):
 
         self.crit = nn.L1Loss(reduction='mean').to(self.device)
         if self.init_noise_sigma > 0.:
-            self.crit_bmc = BMCLoss(init_noise_sigma)
+            self.crit_bmc = BMCLoss(init_noise_sigma).to(self.device)
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

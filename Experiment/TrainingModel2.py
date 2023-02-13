@@ -153,9 +153,9 @@ class TrainingModel(BaseExperiment):
             # for epoch in range(1, self.__n_epoch + 1):
             logging.info("Epoch {} ({})".format(epoch, datetime.now()))
 
-            # if rank == 0:
-            #     tb_writer.add_scalar(f"lr", lr_schedulers["lr_0"].get_last_lr(),
-            #                          global_step=epoch + self.__tb_epoch_shift)
+            if rank == 0:
+                tb_writer.add_scalar(f"lr", lr_schedulers["lr_0"].get_last_lr(),
+                                     global_step=epoch + self.__tb_epoch_shift)
 
             epoch_loss_log = {}
             model.trigger_model(train=True)

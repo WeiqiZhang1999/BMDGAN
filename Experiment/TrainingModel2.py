@@ -154,6 +154,7 @@ class TrainingModel(BaseExperiment):
             logging.info("Epoch {} ({})".format(epoch, datetime.now()))
 
             if rank == 0:
+                logging.info(f"{lr_schedulers}")
                 tb_writer.add_scalar(f"lr", lr_schedulers["lr_0"].get_last_lr(),
                                      global_step=epoch + self.__tb_epoch_shift)
 

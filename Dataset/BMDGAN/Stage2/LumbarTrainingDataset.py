@@ -332,6 +332,7 @@ class LumbarL1TrainingDataset(Dataset):
                  aug_conf: str,
                  n_worker,
                  view='AP',
+                 level=1,
                  preload=True,
                  verbose=False):
         self.split_fold = split_fold
@@ -341,6 +342,7 @@ class LumbarL1TrainingDataset(Dataset):
         self.preload = preload
         self.verbose = verbose
         self.view = view
+        self.level = level
 
         self.transformer = IdentityTransformer()
         if aug_conf is not None:
@@ -413,6 +415,7 @@ class LumbarL1TrainingDataset(Dataset):
 
         xp = xp.astype(np.float64)
         drr = drr.astype(np.float64)
+        drr = np.expand_dims(drr[self.level], axis=0)
 
         transform_parameters = self.transformer.get_random_transform(img_shape=self.load_size)
         xp = self.transformer.apply_transform(x=xp, transform_parameters=transform_parameters)

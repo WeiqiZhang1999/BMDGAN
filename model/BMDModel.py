@@ -41,7 +41,6 @@ class BMDModel(TrainingModelInt):
                  log_pcc=False,
                  lumbar_data=False,
                  binary=False,
-                 view='AP',
                  cycle_training=False,
                  # clip_grad=False,
                  # clip_max_norm=0.01,
@@ -108,18 +107,12 @@ class BMDModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        if self.lumbar_data and view == 'AP':
+        if self.lumbar_data:
             self.MIN_VAL_DXA_DRR_43 = 0.
-            self.MAX_VAL_DXA_DRR_43 = 36.74824
+            self.MAX_VAL_DXA_DRR_43 = 34.88827
             self.THRESHOLD_DXA_BMD_43 = 1e-5
             self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-            self.MAX_VAL_DXA_MASK_DRR_43 = 91.80859
-        elif self.lumbar_data and view == 'LAT':
-            self.MIN_VAL_DXA_DRR_43 = 0.
-            self.MAX_VAL_DXA_DRR_43 = 36.75209
-            self.THRESHOLD_DXA_BMD_43 = 1e-5
-            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-            self.MAX_VAL_DXA_MASK_DRR_43 = 89.91797
+            self.MAX_VAL_DXA_MASK_DRR_43 = 86.04297
         else:
             self.MIN_VAL_DXA_DRR_315 = 0.
             self.MAX_VAL_DXA_DRR_315 = 40398.234376
@@ -236,6 +229,7 @@ class BMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
+            spaces = data["spacing"].to(self.device)
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
 
             drrs_ = ImageHelper.denormal(drrs)
@@ -257,8 +251,9 @@ class BMDModel(TrainingModelInt):
                     fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
 
                     for i in range(B):
+                        space = spaces[i][1] * spaces[i][2]
                         inference_ai_list.append(
-                            self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i]))
+                            self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i], space))
                     gt_bmds.append(data["CTBMD"].view(-1))
                 else:
                     fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
@@ -284,7 +279,7 @@ class BMDModel(TrainingModelInt):
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC_AVG"] = pcc
+            ret["BMD_PCC"] = pcc
         return ret
 
     @torch.no_grad()
@@ -370,10 +365,10 @@ class BMDModel(TrainingModelInt):
         return numerator / area
 
     @staticmethod
-    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor
+    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor, space: np.ndarray | torch.Tensor
                                          ) -> float | np.ndarray | torch.Tensor:
-        area = mask.sum()
-        numerator = (image * mask).sum()
+        area = (mask * space).sum()
+        numerator = image.sum()
         return numerator / area
 
 

@@ -482,8 +482,12 @@ class CustomRegressionBMDModelInference(InferenceModelInt):
 
         data = pd.DataFrame(results)
 
-        save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
-        data.to_excel(save_dir)
+        # save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
+        df_dir = OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\regression_test"
+                                        r"\inference_base\output\e30\regression_results.xlsx")
+        previous_df = pd.read_excel(df_dir, index_col=0)
+        results_df = pd.concat([previous_df, data])
+        results_df.to_excel(df_dir)
 
 
 def weights_init(m):

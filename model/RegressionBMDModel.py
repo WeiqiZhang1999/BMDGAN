@@ -194,7 +194,9 @@ class ViTRegressionBMDModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_enc_config,
-                 vit_config):
+                 vit_config,
+                 epoch):
+        self.epoch = epoch
         self.device = 'cuda'
         self.rank = 0
 
@@ -238,7 +240,7 @@ class ViTRegressionBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             gt_bmds = data["CTvBMD"].numpy()
             case_names = data["case_name"]
-            predicted_bmds = self.features_forword(xps).cpu().numpy()
+            predicted_bmds = self.features_forword(xps).view(-1).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):
@@ -259,8 +261,18 @@ class ViTRegressionBMDModelInference(InferenceModelInt):
 
         data = pd.DataFrame(results)
 
-        save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
-        data.to_excel(save_dir)
+        # save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
+        base_dir = OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\regression_test"
+                                        r"\inference_vit\output")
+        output_dir = OSHelper.path_join(base_dir, f"e{self.epoch}")
+        OSHelper.mkdirs(output_dir)
+        df_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
+        if OSHelper.path_exists(df_dir):
+            previous_df = pd.read_excel(df_dir, index_col=0)
+            results_df = pd.concat([previous_df, data])
+            results_df.to_excel(df_dir)
+        else:
+            data.to_excel(df_dir)
 
 
 class CustomRegressionBMDModel(TrainingModelInt):

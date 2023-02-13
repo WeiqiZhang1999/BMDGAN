@@ -26,6 +26,7 @@ from Network.model.ModelHead.FCRegressionHead import FCRegressionHead
 from scipy.stats import pearsonr
 import torch.nn as nn
 import math
+import pandas as pd
 from Dataset.DataModule2 import DataModule
 from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
@@ -70,7 +71,6 @@ class RegressionBMDModel(TrainingModelInt):
         # self.head = DDPHelper.shell_ddp(self.head)
 
         self.crit = nn.L1Loss(reduction='mean').to(self.device)
-
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -142,7 +142,7 @@ class RegressionBMDModel(TrainingModelInt):
         mse /= total_count
         rmse /= total_count
         ret = {"MSE": mse.cpu().numpy(),
-               "RMSE": rmse.cpu().numpy(),}
+               "RMSE": rmse.cpu().numpy(), }
 
         inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
         gt_bmds = torch.cat(gt_bmd_list).cpu().numpy()
@@ -190,11 +190,11 @@ class RegressionBMDModel(TrainingModelInt):
         return [self.netG_optimizer]
 
 
-class BMDModelInference(InferenceModelInt):
+class ViTRegressionBMDModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_enc_config,
-                 netG_up_config):
+                 vit_config):
         self.device = 'cuda'
         self.rank = 0
 
@@ -204,10 +204,9 @@ class BMDModelInference(InferenceModelInt):
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
-        self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
-        self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
-        self.linear = torch.nn.Linear((64 * (2 ** 2)), 1)
-        self.head = nn.Sequential(self.norm, self.linear).to(self.device)
+        self.transformer = SimpleViT(**vit_config).to(self.device)
+        self.linear = torch.nn.Linear(1024, 1)
+        self.head = nn.Sequential(nn.LayerNorm(1024), self.linear).to(self.device)
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
         for signature in ["head", "netG_fus", "netG_enc", "transformer"]:
@@ -219,7 +218,7 @@ class BMDModelInference(InferenceModelInt):
     def features_forword(self, x):
         x = self.netG_fus(self.netG_enc(x))
         x = self.transformer(x)
-        x = self.head(x.mean([-2, -1]))
+        x = self.head(x)
         return x
 
     @torch.no_grad()
@@ -244,7 +243,6 @@ class BMDModelInference(InferenceModelInt):
                 predicted_bmd = predicted_bmds[i]
                 save_dir = OSHelper.path_join(output_dir, "results")
                 OSHelper.mkdirs(save_dir)
-
 
 
 class CustomRegressionBMDModel(TrainingModelInt):
@@ -281,7 +279,6 @@ class CustomRegressionBMDModel(TrainingModelInt):
 
         self.crit = nn.L1Loss(reduction='mean').to(self.device)
         # self.crit = nn.MSELoss(reduction='mean').to(self.device)
-
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -351,7 +348,7 @@ class CustomRegressionBMDModel(TrainingModelInt):
         mse /= total_count
         rmse /= total_count
         ret = {"MSE": mse.cpu().numpy(),
-               "RMSE": rmse.cpu().numpy(),}
+               "RMSE": rmse.cpu().numpy(), }
 
         inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
         gt_bmds = torch.cat(gt_bmd_list).cpu().numpy()
@@ -399,11 +396,11 @@ class CustomRegressionBMDModel(TrainingModelInt):
         return [self.netG_optimizer]
 
 
-class RegressionBMDModelInference(InferenceModelInt):
+class CustomRegressionBMDModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_enc_config,
-                 netG_up_config):
+                 ):
         self.device = 'cuda'
         self.rank = 0
 
@@ -413,13 +410,12 @@ class RegressionBMDModelInference(InferenceModelInt):
                                                      output_nc=(64 * (2 ** 2)),
                                                      norm_type="group",
                                                      padding_type="reflect").to(self.device)
-        self.transformer = FlowTransformerBlocks(embed_dim=(64 * (2 ** 2)), img_size=[128, 64]).to(self.device)
         self.norm = nn.GroupNorm(32, (64 * (2 ** 2)))
-        self.linear = torch.nn.Linear((64 * (2 ** 2)), 1)
+        self.linear = torch.nn.Linear(256, 1)
         self.head = nn.Sequential(self.norm, self.linear).to(self.device)
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
-        for signature in ["head", "netG_fus", "netG_enc", "transformer"]:
+        for signature in ["head", "netG_fus", "netG_enc"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net, load_path, strict=True)
@@ -427,7 +423,6 @@ class RegressionBMDModelInference(InferenceModelInt):
 
     def features_forword(self, x):
         x = self.netG_fus(self.netG_enc(x))
-        x = self.transformer(x)
         x = self.head(x.mean([-2, -1]))
         return x
 
@@ -440,19 +435,38 @@ class RegressionBMDModelInference(InferenceModelInt):
                             total=len(data_module.inference_dataloader),
                             mininterval=60, maxinterval=180, )
 
+        gt_list = []
+        fake_list = []
+        name_list = []
+
         for data in iterator:
             xps = data["xp"].to(self.device)
-            spaces = data["spacing"].numpy()
+            gt_bmds = data["CTvBMD"].numpy()
             case_names = data["case_name"]
             predicted_bmds = self.features_forword(xps).cpu().numpy()
 
             B = xps.shape[0]
             for i in range(B):
                 case_name = case_names[i]
-                space = spaces[i]
+                gt_bmd = gt_bmds[i]
                 predicted_bmd = predicted_bmds[i]
-                save_dir = OSHelper.path_join(output_dir, "results")
-                OSHelper.mkdirs(save_dir)
+
+                name_list.append(case_name)
+                gt_list.append(gt_bmd)
+                fake_list.append(predicted_bmd)
+
+                # save_dir = OSHelper.path_join(output_dir, "results")
+
+        results = {"case_name": name_list,
+                   "GTBMD": gt_list,
+                   "FakeBMD": fake_list
+                   }
+
+        data = pd.DataFrame(results)
+
+        save_dir = OSHelper.path_join(output_dir, "regression_results.xlsx")
+        data.to_excel(save_dir)
+
 
 def weights_init(m):
     classname = m.__class__.__name__

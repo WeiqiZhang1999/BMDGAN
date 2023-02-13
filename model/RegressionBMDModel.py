@@ -20,6 +20,7 @@ from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 from Network.model.Transformer import TransformerBlocks, FlowTransformerBlocks
 from Network.model.ViT import SimpleViT
+from Network.model.SDViT import ViT
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Utils.ImageHelper import ImageHelper

@@ -166,14 +166,14 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
 
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_58_5_fold_new.json"), 'r') as f:
+        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_58_5_fold_novel.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["test"]
 
-        self.xp_root = OSHelper.path_join(self.data_root, "Lumbar_Xp_58_post")
+        self.xp_root = OSHelper.path_join(self.data_root, "Lumbar_Xp_59_post")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           "Lumbar_DRR_58_Ensembles")
+                                           "Lumbar_DRR_59_Ensembles")
         self.mask_root = OSHelper.path_join(self.data_root,
-                                            "Lumbar_Mask_DRR_58_Ensembles")
+                                            "Lumbar_Mask_DRR_59_Ensembles")
 
         self.bmd_df_root = OSHelper.path_join(self.data_root, "Spine_data_for_AI_celan_20230119.xlsx")
         self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)

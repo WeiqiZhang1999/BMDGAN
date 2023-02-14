@@ -194,7 +194,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
             case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
-            df_case_name = case_name.split('_')[0] + '_' + case_name.split('_')[1]
+            df_case_name = case_name.split('_')[0] + '_' + case_name.split('_')[1] + '_' + case_name.split('_')[2]
             self.bmd_pool.append(self.bmd_df.loc[df_case_name, 'CT-vBMD'])
 
             xp_dao = MetaImageDAO(df_case_name, image_path=case_xp_dir)

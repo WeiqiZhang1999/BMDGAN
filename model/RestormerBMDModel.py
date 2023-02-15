@@ -39,7 +39,7 @@ class RestormerBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_enc_config,
+                 netG_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
                  lambda_FM=10.,
@@ -54,7 +54,7 @@ class RestormerBMDModel(TrainingModelInt):
         self.cycle_training = cycle_training
 
         # Prepare models
-        self.netG = Restormer(**netG_enc_config).to(self.device)
+        self.netG = Restormer(**netG_config).to(self.device)
         self.optimizer_config = optimizer_config
         self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
 

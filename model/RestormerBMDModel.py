@@ -202,6 +202,7 @@ class RestormerBMDModel(TrainingModelInt):
 
                 for i in range(B):
                     space = spaces[i][1] * spaces[i][2]
+                    logging.info(f"space1 {spaces[i][1]} space2 {spaces[i][2]}")
                     inference_ai_list.append(
                         self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i], space))
                 gt_bmds.append(data["CTBMD"].view(-1))

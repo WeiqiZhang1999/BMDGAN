@@ -86,20 +86,20 @@ class TorchHelper:
 
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
         elif policy == "cosine_warm":
-            min_lr = config["min_lr"]
             scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
                                                                  T_0=10,
                                                                  T_mult=2,
-                                                                 eta_min=min_lr)
+                                                                 eta_min=1e-7)
         elif policy == "custom_cosine_warm":
             milestones = config["milestones"]
+            min_lr = config["min_lr"]
             scheduler = lr_scheduler.SequentialLR(optimizer,
                                                   schedulers=[lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
                                                                                                        T_0=milestones,
                                                                                                        T_mult=2,
-                                                                                                       eta_min=1e-7),
+                                                                                                       eta_min=min_lr),
                                                               lr_scheduler.LambdaLR(optimizer,
-                                                                                    lambda epoch: 1e-7)],
+                                                                                    lambda epoch: min_lr)],
                                                   milestones=[milestones])
         else:
             return NotImplementedError('learning rate policy [%s] is not implemented', policy)

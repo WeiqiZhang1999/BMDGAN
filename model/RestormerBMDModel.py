@@ -19,8 +19,6 @@ from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 
 from Network.model.Restormer.Restormer import Restormer
-from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
-from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D

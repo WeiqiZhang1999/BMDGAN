@@ -162,7 +162,7 @@ class OverlapPatchEmbed(nn.Module):
     def __init__(self, in_c=3, embed_dim=48, bias=False):
         super(OverlapPatchEmbed, self).__init__()
 
-        self.proj = nn.Conv2d(in_c, embed_dim, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.proj = nn.Conv2d(in_c, embed_dim, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
 
     def forward(self, x):
         x = self.proj(x)
@@ -255,7 +255,7 @@ class Restormer(nn.Module):
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_refinement_blocks)])
 
 
-        self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
 
     def forward(self, inp_img):
 

@@ -240,9 +240,9 @@ class RestormerBMDModel(TrainingModelInt):
 
         ret = {"Xray": xps,
                "DRR": drrs_,
-               "Mask DRR": masks,
-               "Fake DRR": fake_drrs_,
-               "Fake Mask": fake_masks,
+               "Mask_DRR": masks,
+               "Fake_DRR": fake_drrs_,
+               "Fake_Mask": fake_masks,
                }
         for key, val in ret.items():
             for i in range(val.shape[0]):

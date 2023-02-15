@@ -255,7 +255,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         xp_dao, drr_dao, mask_dao = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
         if self.preload:
             xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
-            spacing = xp_dao.spacing.copy()
+            spacing = drr_dao.spacing.copy()
         else:
             xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)

@@ -86,10 +86,11 @@ class TorchHelper:
 
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
         elif policy == "cosine_warm":
+            min_lr = config["min_lr"]
             scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
                                                                  T_0=10,
                                                                  T_mult=2,
-                                                                 eta_min=1e-7)
+                                                                 eta_min=min_lr)
         elif policy == "custom_cosine_warm":
             milestones = config["milestones"]
             scheduler = lr_scheduler.SequentialLR(optimizer,

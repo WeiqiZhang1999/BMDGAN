@@ -31,7 +31,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class RestormerBMDModel(TrainingModelInt):
+class RestormerModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
@@ -373,7 +373,7 @@ class RestormerBMDModel(TrainingModelInt):
 
 
 
-class RestomerBMDModelInference(InferenceModelInt):
+class RestomerModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_config):
@@ -404,7 +404,7 @@ class RestomerBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            fake_drrs = self.netG(xps).cpu()
+            fake_drrs = self.netG(xps).cpu().numpy()
 
             B = xps.shape[0]
 

@@ -317,17 +317,13 @@ class RestormerBMDModel(TrainingModelInt):
 class RestomerBMDModelInference(InferenceModelInt):
 
     def __init__(self,
-                 netG_enc_config,
-                 netG_up_config,
-                 binary):
+                 netG_config):
 
-        self.binary = binary
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
 
-        self.netG = Restormer(**netG_enc_config).to(self.device)
-        self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
+        self.netG = Restormer(**netG_config).to(self.device)
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
         for signature in ["netG"]:

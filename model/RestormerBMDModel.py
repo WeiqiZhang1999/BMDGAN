@@ -350,7 +350,7 @@ class RestomerBMDModelInference(InferenceModelInt):
             B = xps.shape[0]
 
             for i in range(B):
-                fake_drr_with_mask = fake_drrs[i] # (2, H, W)
+                fake_drr_with_mask = fake_drrs[i].clip(-1.0, 1.0) # (2, H, W)
                 fake_drr = fake_drr_with_mask[0].unsqueeze(0).numpy()
                 fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0).numpy()
                 case_name = case_names[i]

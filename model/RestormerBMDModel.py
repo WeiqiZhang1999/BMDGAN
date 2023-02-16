@@ -166,10 +166,6 @@ class RestormerBMDModel(TrainingModelInt):
         total_count = 0.
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
-        if self.log_bmd_pcc:
-            pcc = torch.tensor([0.]).to(self.device)
-            inference_ai_list = []
-            gt_bmds = []
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -180,7 +176,6 @@ class RestormerBMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            spaces = data["spacing"].to(self.device)
             fake_drrs = self.netG(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
@@ -192,20 +187,6 @@ class RestormerBMDModel(TrainingModelInt):
                                             reduction=None, dim=(1, 2, 3), data_range=255.).sum()
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
-            if self.log_bmd_pcc:
-                fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
-                fake_masks_ = fake_drrs[:, 1, :, :].unsqueeze(1)
-                fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
-                fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
-
-                for i in range(B):
-                    space = spaces[i][1] * spaces[i][2]
-                    # logging.info(f"space1 {spaces[i][1]} space2 {spaces[i][2]}")
-                    inference_ai_list.append(
-                        self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i], space))
-                gt_bmds.append(data["CTBMD"].view(-1))
 
             total_count += B
 
@@ -218,13 +199,6 @@ class RestormerBMDModel(TrainingModelInt):
         ret = {"PSNR": psnr.cpu().numpy(),
                "SSIM": ssim.cpu().numpy()}
 
-        if self.log_bmd_pcc:
-            inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
-            gt_bmds = torch.cat(gt_bmds).cpu().numpy()
-            pcc += pearsonr(gt_bmds, inference_ai_list)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC"] = pcc
         return ret
 
     @torch.no_grad()
@@ -350,7 +324,7 @@ class RestomerBMDModelInference(InferenceModelInt):
             B = xps.shape[0]
 
             for i in range(B):
-                fake_drr_with_mask = fake_drrs[i].clip(-1.0, 1.0) # (2, H, W)
+                fake_drr_with_mask = fake_drrs[i] # (2, H, W)
                 fake_drr = fake_drr_with_mask[0].unsqueeze(0).numpy()
                 fake_mask_drr = fake_drr_with_mask[1].unsqueeze(0).numpy()
                 case_name = case_names[i]

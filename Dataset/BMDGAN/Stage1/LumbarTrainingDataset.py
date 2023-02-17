@@ -137,23 +137,9 @@ class LumbarTrainingDataset(Dataset):
         drr = self.transformer.apply_transform(x=drr, transform_parameters=transform_parameters)
         mask = self.transformer.apply_transform(x=mask, transform_parameters=transform_parameters)
 
-        xp = ImageHelper.resize(xp, self.image_size) / 255.
-        xp = ImageHelper.standardize(xp, 0.5, 0.5)
-        xp = np.clip(xp, -1., 1.)
-        xp = xp.astype(np.float32)
-        xp = np.transpose(xp, (2, 0, 1))
-
-        drr = ImageHelper.resize(drr, self.image_size) / 255.
-        drr = ImageHelper.standardize(drr, 0.5, 0.5)
-        drr = np.clip(drr, -1., 1.)
-        drr = drr.astype(np.float32)
-        drr = np.transpose(drr, (2, 0, 1))
-
-        mask = ImageHelper.resize(mask, self.image_size) / 255.
-        mask = ImageHelper.standardize(mask, 0.5, 0.5)
-        mask = np.clip(mask, -1., 1.)
-        mask = mask.astype(np.float32)
-        mask = np.transpose(mask, (2, 0, 1))
+        xp = self.pre_process(xp)
+        drr = self.pre_process(drr)
+        mask = self.pre_process(mask)
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
         drr_with_mask_train = drr_with_mask.transpose((0, 4, 1, 5, 2, 6, 3, 7))
@@ -184,3 +170,11 @@ class LumbarTrainingDataset(Dataset):
         zoom_range=0.3,
         lock_zoom_ratio=False
     )}
+
+    def pre_process(self, drr):
+        drr = ImageHelper.resize(drr, self.image_size) / 255.
+        drr = ImageHelper.standardize(drr, 0.5, 0.5)
+        drr = np.clip(drr, -1., 1.)
+        drr = drr.astype(np.float32)
+        drr = np.transpose(drr, (2, 0, 1))
+        return drr

@@ -70,6 +70,7 @@ class TrainingModel(BaseExperiment):
         self.__tb_epoch_shift = tb_epoch_shift
         self.__resume = resume
 
+        self._tb_path = OSHelper.path_join(self._output_dir, "logs")
         self._output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))
         if OSHelper.path_exists(OSHelper.path_join(self._output_dir, "ckp_state.pt")):
             self.__resume = True
@@ -137,7 +138,7 @@ class TrainingModel(BaseExperiment):
 
         first_epoch = True
         if rank == 0:
-            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._output_dir, "tb_log")))
+            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self._split_fold))))
         while True:
             if self.__scheduler_config["policy"] != "infinite":
                 if epoch == self.__n_epoch + 1:

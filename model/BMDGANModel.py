@@ -20,7 +20,6 @@ from .TrainingModelInt import TrainingModelInt
 
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
-from Network.model.ClassicNetworks.ResNet import resnet50
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -45,12 +44,14 @@ class BMDGANModel(TrainingModelInt):
                  lambda_AE=100.,
                  lambda_FM=10.,
                  lambda_GC=1.,
+                 pretrain_stage=False,
                  log_pcc=False,
                  ):
 
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
+        self.pretrain_stage = pretrain_stage
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -88,11 +89,16 @@ class BMDGANModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        self.MIN_VAL_DXA_DRR_43 = 0.
-        self.MAX_VAL_DXA_DRR_43 = 34.88827
-        self.THRESHOLD_DXA_BMD_43 = 1e-5
-        self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-        self.MAX_VAL_DXA_MASK_DRR_43 = 86.04297
+        if self.pretrain_stage:
+            self.MIN_VAL_DXA_DRR_2k = -66901.875
+            self.MAX_VAL_DXA_DRR_2k = 105194.375
+            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+            self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
+        else:
+            self.MIN_VAL_DXA_DRR_2k = 0.
+            self.MAX_VAL_DXA_DRR_2k = 34.88827
+            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+            self.MAX_VAL_DXA_MASK_DRR_2k = 86.04297
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -220,19 +226,19 @@ class BMDGANModel(TrainingModelInt):
                 for i in [0, 2, 4, 6]:
                     gt_drrs_ = drrs[:, i, :, :].unsqueeze(1)
                     gt_masks_ = drrs[:, i + 1, :, :].unsqueeze(1)
-                    gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_43,
-                                                       self.MAX_VAL_DXA_MASK_DRR_43)
-                    gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+                    gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
+                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
+                    gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
 
                     fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
                     fake_masks_ = fake_drrs[:, i + 1, :, :].unsqueeze(1)
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43,
-                                                       self.MAX_VAL_DXA_MASK_DRR_43)
-                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
+                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
+                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
                     for j in range(B):
                         space = spaces[j][1] * spaces[j][2]
                         if i == 0:

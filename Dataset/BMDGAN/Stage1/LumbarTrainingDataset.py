@@ -25,6 +25,7 @@ class LumbarTrainingDataset(Dataset):
                  aug_conf: str,
                  n_worker,
                  view='AP',
+                 debug=False,
                  preload=True,
                  verbose=False):
         self.split_fold = split_fold
@@ -34,6 +35,7 @@ class LumbarTrainingDataset(Dataset):
         self.preload = preload
         self.verbose = verbose
         self.view = view
+        self.debug = debug
 
         self.transformer = IdentityTransformer()
         if aug_conf is not None:
@@ -41,28 +43,32 @@ class LumbarTrainingDataset(Dataset):
                 self.transformer = ImageTransformer(**self.transformer_param_dict[aug_conf])
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"jmid_lumbar_drr.json"), 'r') as f:
+        with open(OSHelper.path_join(self.data_root, r"20k_trunkDRR_fold_1.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["train"]
 
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':
-            self.xp_root = OSHelper.path_join(self.data_root, "20230130_JMID_LumbarDRR_AP")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230130_JMID_Lumbar_DecomposedDRR_AP_Ensembles")
+            self.xp_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_offset900_AP")
+            self.drr_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_AP_normal")
+            self.mask_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_Mask_AP_normal")
         else:
-            self.xp_root = OSHelper.path_join(self.data_root, "20230130_JMID_LumbarDRR_LAT")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230130_JMID_Lumbar_DecomposedDRR_LAT_Ensembles")
+            raise NotImplementedError
+            # self.xp_root = OSHelper.path_join(self.data_root, "20230130_JMID_LumbarDRR_LAT")
+            # self.drr_root = OSHelper.path_join(self.data_root, "20230130_JMID_Lumbar_DecomposedDRR_LAT_Ensembles")
 
         self.xp_pool = []
         self.drr_pool = []
+        self.mask_pool = []
+        if self.debug:
+            training_case_names = training_case_names[:100]
         for case_name in training_case_names:
-            xp_suffix = f"_lumbarROI_DRR_{self.view}.mhd"
-            drr_suffix = f"_lumbarROI_DecomposedDRR_{self.view}_Ensembles.mhd"
-
-            xp_case_name = case_name + xp_suffix
-            drr_case_name = case_name + drr_suffix
+            xp_case_name = f"Xp_{case_name}_trunkDRR_Decomposed_.mhd"
+            drr_case_name = f"{case_name}_trunkDRR_Decomposed_{self.view}.mhd"
+            mask_case_name = f"{case_name}_trunkDRR_Decomposed_binary_mask_{self.view}.mhd"
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
+            case_mask_dir = OSHelper.path_join(self.drr_root, mask_case_name)
 
             # if not OSHelper.path_exists(case_xp_dir):
             #     continue
@@ -71,12 +77,19 @@ class LumbarTrainingDataset(Dataset):
             #     assert OSHelper.path_exists(drr_path), drr_path
             self.xp_pool.append(case_xp_dir)
             self.drr_pool.append(case_drr_dir)
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0
+            self.mask_pool.append(case_mask_dir)
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.mask_pool) > 0
 
-        if self.verbose:
-            print("Trainig Datasets")
+        if self.debug:
+            print("Debug Training Datasets")
             print(f"Xp: {len(self.xp_pool)}")
             print(f"DRR: {len(self.drr_pool)}")
+            print(f"Mask: {len(self.mask_pool)}")
+        if self.verbose:
+            print("Training Datasets")
+            print(f"Xp: {len(self.xp_pool)}")
+            print(f"DRR: {len(self.drr_pool)}")
+            print(f"Mask: {len(self.mask_pool)}")
 
         if self.preload:
             args = []
@@ -91,21 +104,29 @@ class LumbarTrainingDataset(Dataset):
             self.drr_pool = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                         desc="Loading DRR" if self.verbose else None,
                                                         mininterval=60, maxinterval=180)
+            args = []
+            for mask_path in self.mask_pool:
+                args.append((mask_path, self.load_size))
+            self.mask_pool = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
+                                                         desc="Loading Mask DRR" if self.verbose else None,
+                                                         mininterval=60, maxinterval=180)
 
     def __len__(self):
         return len(self.xp_pool)
 
     def __getitem__(self, idx):
-        xp_path, drr_path = self.xp_pool[idx], self.drr_pool[idx]
+        xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 
         if self.preload:
-            xp, drr = xp_path.copy(), drr_path.copy()
+            xp, drr, mask = xp_path.copy(), drr_path.copy(), mask_path.copy()
         else:
             xp = self._load_image(xp_path, self.load_size)
             drr = self._load_image(drr_path, self.load_size)
+            mask = self._load_image(mask_path, self.load_size)
 
         xp = xp.astype(np.float64)
         drr = drr.astype(np.float64)
+        mask = mask.astype(np.float64)
 
         transform_parameters = self.transformer.get_random_transform(img_shape=self.load_size)
         xp = self.transformer.apply_transform(x=xp, transform_parameters=transform_parameters)
@@ -114,6 +135,7 @@ class LumbarTrainingDataset(Dataset):
         if "contrast" in transform_parameters:
             transform_parameters.pop("contrast")
         drr = self.transformer.apply_transform(x=drr, transform_parameters=transform_parameters)
+        mask = self.transformer.apply_transform(x=mask, transform_parameters=transform_parameters)
 
         xp = ImageHelper.resize(xp, self.image_size) / 255.
         xp = ImageHelper.standardize(xp, 0.5, 0.5)
@@ -127,7 +149,16 @@ class LumbarTrainingDataset(Dataset):
         drr = drr.astype(np.float32)
         drr = np.transpose(drr, (2, 0, 1))
 
-        return {"xp": xp, "drr": drr}
+        mask = ImageHelper.resize(mask, self.image_size) / 255.
+        mask = ImageHelper.standardize(mask, 0.5, 0.5)
+        mask = np.clip(mask, -1., 1.)
+        mask = mask.astype(np.float32)
+        mask = np.transpose(mask, (2, 0, 1))
+
+        drr_with_mask = np.concatenate((drr, mask), axis=0)
+        drr_with_mask_train = drr_with_mask.transpose((0, 4, 1, 5, 2, 6, 3, 7))
+
+        return {"xp": xp, "drr": drr_with_mask_train}
 
     @staticmethod
     def _load_image(load_path, load_size):

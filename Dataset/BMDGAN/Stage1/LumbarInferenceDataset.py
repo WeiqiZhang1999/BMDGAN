@@ -160,8 +160,10 @@ class LumbarInferenceDataset(Dataset):
         else:
             img = np.transpose(img, (1, 2, 0))  # (H, W, 1)
             temp_spacing = spacing.copy()
-            spacing[0], spacing[1], spacing[2] = temp_spacing[-2], temp_spacing[-1], 1.
-            # spacing[0], spacing[1], spacing[2] = temp_spacing[1], temp_spacing[2], temp_spacing[0]  # (H, W, 1)
+            if len(spacing) < 3:
+                spacing = np.concatenate([spacing, np.ones((1,))])
+            else:
+                spacing[0], spacing[1], spacing[2] = temp_spacing[1], temp_spacing[2], temp_spacing[0]  # (H, W, 1)
         img = img.astype(np.float64)
 
         # img = ImageHelper.resize(img, output_shape=load_size)

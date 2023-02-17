@@ -142,10 +142,8 @@ class LumbarTrainingDataset(Dataset):
         mask = self.pre_process(mask)
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
-        print(drr_with_mask.shape)
-        drr_with_mask_train = np.transpose(drr_with_mask, (0, 4, 1, 5, 2, 6, 3, 7))
 
-        return {"xp": xp, "drr": drr_with_mask_train}
+        return {"xp": xp, "drr": drr_with_mask}
 
     @staticmethod
     def _load_image(load_path, load_size):

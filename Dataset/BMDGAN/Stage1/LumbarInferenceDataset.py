@@ -146,9 +146,8 @@ class LumbarInferenceDataset(Dataset):
         case_name = xp_dao.case_name
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
-        drr_with_mask_test = drr_with_mask.transpose((0, 4, 1, 5, 2, 6, 3, 7))
 
-        return {"xp": xp, "drr": drr_with_mask_test, "spacing": spacing, "case_name": case_name}
+        return {"xp": xp, "drr": drr_with_mask, "spacing": spacing, "case_name": case_name}
 
 
     @staticmethod

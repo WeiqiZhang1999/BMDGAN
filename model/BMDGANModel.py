@@ -143,13 +143,13 @@ class BMDGANModel(TrainingModelInt):
 
         if self.lambda_GC > 0.:
             gc_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
-            for i in [0, 2, 4, 6]:
+            for i in [0, 1, 2, 3]:
                 drr0 = drr[:, i, :, :].unsqueeze(1)
                 fake_drr0 = fake_drr[:, i, :, :].unsqueeze(1)
-                drr1 = drr[:, i + 1, :, :].unsqueeze(1)
-                fake_drr1 = fake_drr[:, i + 1, :, :].unsqueeze(1)
-                gc_loss_1 = self.crit_GC(drr0, fake_drr0)
-                gc_loss_2 = self.crit_GC(drr1, fake_drr1)
+                drr1 = drr[:, i + 4, :, :].unsqueeze(1)
+                fake_drr1 = fake_drr[:, i + 4, :, :].unsqueeze(1)
+                gc_loss_1 = self.crit_GC(drr0, fake_drr0) * 0.125
+                gc_loss_2 = self.crit_GC(drr1, fake_drr1) * 0.125
                 gc_loss += gc_loss_1 + gc_loss_2
             log["G_GC"] = gc_loss.detach()
             G_loss += gc_loss * self.lambda_GC
@@ -223,9 +223,9 @@ class BMDGANModel(TrainingModelInt):
                                                         reduction=None, data_range=255.).sum()
 
             if self.log_bmd_pcc:
-                for i in [0, 2, 4, 6]:
+                for i in [0, 1, 2, 3]:
                     gt_drrs_ = drrs[:, i, :, :].unsqueeze(1)
-                    gt_masks_ = drrs[:, i + 1, :, :].unsqueeze(1)
+                    gt_masks_ = drrs[:, i + 4, :, :].unsqueeze(1)
                     gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
@@ -233,13 +233,14 @@ class BMDGANModel(TrainingModelInt):
                     gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
 
                     fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
-                    fake_masks_ = fake_drrs[:, i + 1, :, :].unsqueeze(1)
+                    fake_masks_ = fake_drrs[:, i + 4, :, :].unsqueeze(1)
                     fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
                                                        self.MAX_VAL_DXA_MASK_DRR_2k)
                     fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
                     for j in range(B):
+                        assert spaces[j][1] == 1.0 or spaces[j][2] == 1.0
                         space = spaces[j][1] * spaces[j][2]
                         if i == 0:
                             inference_ai_list_L1.append(
@@ -312,13 +313,13 @@ class BMDGANModel(TrainingModelInt):
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}
-        for i in [0, 2, 4, 6]:
+        for i in [0, 1, 2, 3]:
             drrs_ = drrs[:, i, :, :].unsqueeze(1)
-            masks = drrs[:, i + 1, :, :].unsqueeze(1)
+            masks = drrs[:, i + 4, :, :].unsqueeze(1)
             fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
-            fake_masks = fake_drrs[:, i + 1, :, :].unsqueeze(1)
+            fake_masks = fake_drrs[:, i + 4, :, :].unsqueeze(1)
 
-            bone_level = i / 2 + 1
+            bone_level = i + 1
             ret.update({f"L{bone_level}_DRR": drrs_})
             ret.update({f"L{bone_level}_Mask_DRR": masks})
             ret.update({f"L{bone_level}_Fake_DRR": fake_drrs_})

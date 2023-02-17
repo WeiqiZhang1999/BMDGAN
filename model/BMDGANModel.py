@@ -63,8 +63,8 @@ class BMDGANModel(TrainingModelInt):
         self.netG_up = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-        self.netD = MultiscaleDiscriminator(input_nc=12).to(self.device)
-        # input_nc = 4 (L1 - L4) + 8 (L1 - L4 DRR/Mask DRR)
+        self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
+        # input_nc(9) = 1 (Xp) + 8 (L1 - L4 DRR/Mask DRR)
 
         if self.rank == 0:
             self.netG_enc.apply(weights_init)

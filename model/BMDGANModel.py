@@ -246,12 +246,12 @@ class BMDGANModel(TrainingModelInt):
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L1.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-                        elif i == 2:
+                        elif i == 1:
                             inference_ai_list_L2.append(
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L2.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-                        elif i == 4:
+                        elif i == 2:
                             inference_ai_list_L3.append(
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L3.append(

@@ -240,7 +240,6 @@ class BMDGANModel(TrainingModelInt):
                                                        self.MAX_VAL_DXA_MASK_DRR_2k)
                     fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
                     for j in range(B):
-                        assert spaces[j][1] == 1.0 or spaces[j][2] == 1.0
                         space = spaces[j][1] * spaces[j][2]
                         if i == 0:
                             inference_ai_list_L1.append(

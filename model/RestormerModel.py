@@ -52,7 +52,7 @@ class RestormerModel(TrainingModelInt):
         # Prepare models
         self.netG = Restormer(**netG_config).to(self.device)
         self.optimizer_config = optimizer_config
-        self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
+        self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
 
 
         if self.rank == 0:

@@ -38,7 +38,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class RestormerModel(TrainingModelInt):
+class LLFormerModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
@@ -385,7 +385,7 @@ class RestormerModel(TrainingModelInt):
 
 
 
-class RestomerModelInference(InferenceModelInt):
+class LLFormerModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_config):

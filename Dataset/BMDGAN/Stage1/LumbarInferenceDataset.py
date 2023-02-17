@@ -139,7 +139,6 @@ class LumbarInferenceDataset(Dataset):
         if self.preload:
             xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
             spacing = drr_dao.spacing.copy()
-            assert spacing[1] == 1.0 or spacing[2] == 1.0, spacing
         else:
             xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)

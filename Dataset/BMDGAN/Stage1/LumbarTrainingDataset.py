@@ -68,7 +68,7 @@ class LumbarTrainingDataset(Dataset):
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
-            case_mask_dir = OSHelper.path_join(self.drr_root, mask_case_name)
+            case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             # if not OSHelper.path_exists(case_xp_dir):
             #     continue

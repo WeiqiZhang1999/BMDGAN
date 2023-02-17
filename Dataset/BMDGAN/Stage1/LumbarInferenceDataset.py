@@ -70,7 +70,7 @@ class LumbarInferenceDataset(Dataset):
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
-            case_mask_dir = OSHelper.path_join(self.drr_root, mask_case_name)
+            case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             xp_dao = MetaImageDAO(case_name, image_path=case_xp_dir)
             drr_dao = MetaImageDAO(case_name, image_path=case_drr_dir)

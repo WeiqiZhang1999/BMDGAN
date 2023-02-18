@@ -45,6 +45,7 @@ class TrainingModel(BaseExperiment):
                  save_every_n_epoch=None,
                  tb_epoch_shift=0,
                  resume=False,
+                 model_name=None,
                  **base_config,
                  ):
         super().__init__(**base_config)
@@ -69,8 +70,12 @@ class TrainingModel(BaseExperiment):
 
         self.__tb_epoch_shift = tb_epoch_shift
         self.__resume = resume
+        self.__model_name = model_name
 
-        self._tb_path = OSHelper.path_join(self._output_dir, "logs")
+        self._tb_path = OSHelper.path_join(
+            OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain"),
+            "logs")
+
         self._output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))
         if OSHelper.path_exists(OSHelper.path_join(self._output_dir, "ckp_state.pt")):
             self.__resume = True
@@ -138,7 +143,8 @@ class TrainingModel(BaseExperiment):
 
         first_epoch = True
         if rank == 0:
-            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self._split_fold))))
+            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self.__model_name))))
+            # tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self._split_fold))))
         while True:
             if self.__scheduler_config["policy"] != "infinite":
                 if epoch == self.__n_epoch + 1:

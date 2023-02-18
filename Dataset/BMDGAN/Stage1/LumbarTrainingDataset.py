@@ -49,7 +49,7 @@ class LumbarTrainingDataset(Dataset):
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':
             self.xp_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_offset900_AP")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_AP_normal")
+            self.drr_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_AP_normal_new")
             self.mask_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_Mask_AP_normal")
         else:
             raise NotImplementedError

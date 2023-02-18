@@ -75,7 +75,7 @@ class RestormerModel(TrainingModelInt):
         self.log_bmd_pcc = log_pcc
 
         if self.pretrain_stage:
-            self.MIN_VAL_DXA_DRR_2k = -66901.875
+            self.MIN_VAL_DXA_DRR_2k = 0.
             self.MAX_VAL_DXA_DRR_2k = 105194.375
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
             self.MAX_VAL_DXA_MASK_DRR_2k = 109.375

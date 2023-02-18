@@ -92,7 +92,9 @@ class TorchHelper:
                                                                  eta_min=1e-7)
         elif policy == "custom_cosine_warm":
             min_lr = config["min_lr"]
-            scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=min_lr)
+            target_epoch = config["epoch"]
+            scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                 T_0=target_epoch, T_mult=2, eta_min=min_lr)
         else:
             return NotImplementedError('learning rate policy [%s] is not implemented', policy)
         return scheduler

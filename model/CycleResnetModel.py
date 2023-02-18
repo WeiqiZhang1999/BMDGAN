@@ -37,8 +37,7 @@ class CycleResnetModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 netG_enc_config,
-                 netG_up_config,
+                 netG_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
                  lambda_FM=10.,
@@ -53,22 +52,17 @@ class CycleResnetModel(TrainingModelInt):
         self.pretrain_stage = pretrain_stage
 
         # Prepare models
-        self.netG_enc = ResnetGenerator(**netG_enc_config).to(self.device)
+        self.netG = ResnetGenerator(**netG_config).to(self.device)
         self.optimizer_config = optimizer_config
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
         self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
         # input_nc(9) = 1 (Xp) + 8 (L1 - L4 DRR/Mask DRR)
 
         if self.rank == 0:
-            self.netG_enc.apply(weights_init)
-            self.netG_up.apply(weights_init)
+            self.netG.apply(weights_init)
             self.netD.apply(weights_init)
 
         # Wrap DDP
-        self.netG_enc = DDPHelper.shell_ddp(self.netG_enc)
-        self.netG_up = DDPHelper.shell_ddp(self.netG_up)
+        self.netG = DDPHelper.shell_ddp(self.netG)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
@@ -97,8 +91,7 @@ class CycleResnetModel(TrainingModelInt):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.netG_enc.module.parameters(),
-                                                        self.netG_up.module.parameters()),
+        self.netG_optimizer = optimizer(self.netG.module.parameters(),
                                         **self.optimizer_config)
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
@@ -112,7 +105,7 @@ class CycleResnetModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr = self.netG_up(self.netG_enc(xp))
+        fake_drr = self.netG(xp)
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
@@ -202,7 +195,7 @@ class CycleResnetModel(TrainingModelInt):
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
             spaces = data["spacing"].to(self.device)
-            fake_drrs = self.netG_up(self.netG_enc(xps))
+            fake_drrs = self.netG(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -221,7 +214,7 @@ class CycleResnetModel(TrainingModelInt):
                     gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                     gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
-                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
+                                                     self.MAX_VAL_DXA_MASK_DRR_2k)
                     gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
 
                     fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
@@ -271,28 +264,28 @@ class CycleResnetModel(TrainingModelInt):
             pcc_l1 += pearsonr(gt_bmds_L1, inference_ai_list_L1)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
-            ret["L1_BMD_PCC"] = pcc_l1
+            ret["L1_Intensity_PCC"] = pcc_l1
 
             inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
             gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
             pcc_l2 += pearsonr(gt_bmds_L2, inference_ai_list_L2)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
-            ret["L2_BMD_PCC"] = pcc_l2
+            ret["L2_Intensity_PCC"] = pcc_l2
 
             inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
             gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
             pcc_l3 += pearsonr(gt_bmds_L3, inference_ai_list_L3)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
-            ret["L3_BMD_PCC"] = pcc_l3
+            ret["L3_Intensity_PCC"] = pcc_l3
 
             inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
             gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
             pcc_l4 += pearsonr(gt_bmds_L4, inference_ai_list_L4)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
-            ret["L4_BMD_PCC"] = pcc_l4
+            ret["L4_Intensity_PCC"] = pcc_l4
 
         return ret
 
@@ -300,7 +293,7 @@ class CycleResnetModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs = self.netG_up(self.netG_enc(xps))
+        fake_drrs = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}
@@ -323,18 +316,25 @@ class CycleResnetModel(TrainingModelInt):
         return ret
 
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
-        if resume:
-            assert strict == True
-
-        for signature in ["netG_up", "netG_enc", "netD"]:
-            net = getattr(self, signature)
-            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
-            logging.info(f"Model {signature} loaded from {load_path}")
+        # if resume:
+        #     assert strict == True
+        if self.cycle_training:
+            force_strict = False
+            for signature in ["netG", "netD"]:
+                net = getattr(self, signature)
+                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_netG.pt"))
+                TorchHelper.load_network_by_path(net.module, load_path, strict=force_strict)
+                logging.info(f"Model {signature} loaded from {load_path}")
+        else:
+            for signature in ["netG", "netD"]:
+                net = getattr(self, signature)
+                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+                logging.info(f"Model {signature} loaded from {load_path}")
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["netG_up", "netG_enc", "netD"]:
+        for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
             torch.save(net.module.state_dict(), save_path)
@@ -342,11 +342,11 @@ class CycleResnetModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["netG_up", "netG_enc", "netD"]:
+            for signature in ["netG", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["netG_up", "netG_enc", "netD"]:
+            for signature in ["netG", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
 
@@ -377,23 +377,19 @@ class CycleResnetModel(TrainingModelInt):
         return numerator / area
 
 
-class ResnetModelInference(InferenceModelInt):
+class RestomerModelInference(InferenceModelInt):
 
     def __init__(self,
-                 netG_enc_config,
-                 netG_up_config,):
+                 netG_config):
 
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
 
-        self.netG_enc = ResnetGenerator(**netG_enc_config).to(self.device)
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        self.netG = ResnetGenerator(**netG_config).to(self.device)
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
-        for signature in ["netG_up", "netG_enc"]:
+        for signature in ["netG"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net, load_path, strict=True)
@@ -412,7 +408,7 @@ class ResnetModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            fake_drrs = self.netG_up(self.netG_enc(xps)).cpu().numpy()
+            fake_drrs = self.netG(xps).cpu().numpy()
 
             B = xps.shape[0]
 

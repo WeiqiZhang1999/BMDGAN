@@ -264,28 +264,28 @@ class RestormerModel(TrainingModelInt):
             pcc_l1 += pearsonr(gt_bmds_L1, inference_ai_list_L1)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
-            ret["L1_BMD_PCC"] = pcc_l1
+            ret["L1_Intensity_PCC"] = pcc_l1
 
             inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
             gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
             pcc_l2 += pearsonr(gt_bmds_L2, inference_ai_list_L2)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
-            ret["L2_BMD_PCC"] = pcc_l2
+            ret["L2_Intensity_PCC"] = pcc_l2
 
             inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
             gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
             pcc_l3 += pearsonr(gt_bmds_L3, inference_ai_list_L3)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
-            ret["L3_BMD_PCC"] = pcc_l3
+            ret["L3_Intensity_PCC"] = pcc_l3
 
             inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
             gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
             pcc_l4 += pearsonr(gt_bmds_L4, inference_ai_list_L4)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
-            ret["L4_BMD_PCC"] = pcc_l4
+            ret["L4_Intensity_PCC"] = pcc_l4
 
         return ret
 

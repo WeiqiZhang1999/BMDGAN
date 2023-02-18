@@ -119,7 +119,7 @@ class LumbarTrainingDataset(Dataset):
             return 2000
 
     def __getitem__(self, idx):
-        idx = random.randint(0, len(self.xp_pool))
+        idx = random.randint(0, len(self.xp_pool) - 1)
         xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 
         if self.preload:

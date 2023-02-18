@@ -33,7 +33,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class ResnetModel(TrainingModelInt):
+class CycleResnetModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,

@@ -5,7 +5,7 @@
 # @File    : LumbarTrainingDataset.py
 # @Software: PyCharm
 
-
+import random
 from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
 import numpy as np
@@ -112,9 +112,14 @@ class LumbarTrainingDataset(Dataset):
                                                          mininterval=60, maxinterval=180)
 
     def __len__(self):
-        return len(self.xp_pool)
+        # return len(self.xp_pool)
+        if self.debug:
+            return 20
+        else:
+            return 2000
 
     def __getitem__(self, idx):
+        idx = random.randint(0, len(self.xp_pool))
         xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 
         if self.preload:

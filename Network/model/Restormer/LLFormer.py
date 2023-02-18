@@ -182,7 +182,7 @@ class OverlapPatchEmbed(nn.Module):
     def __init__(self, in_c=3, embed_dim=48, bias=False):
         super(OverlapPatchEmbed, self).__init__()
 
-        self.proj = nn.Conv2d(in_c, embed_dim, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.proj = nn.Conv2d(in_c, embed_dim, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
 
     def forward(self, x):
         x = self.proj(x)
@@ -339,7 +339,7 @@ class LLFormer(nn.Module):
         self.layer_fussion_2 = LAM_Module_v2(in_dim=int(dim*3))
         self.conv_fuss_2 = nn.Conv2d(int(dim * 3), int(dim), kernel_size=1, bias=bias)
 
-        self.output = nn.Conv2d(int(dim), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.output = nn.Conv2d(int(dim), out_channels, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
         self.skip = skip
 
 

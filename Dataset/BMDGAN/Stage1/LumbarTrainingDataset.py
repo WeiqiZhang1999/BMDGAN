@@ -116,7 +116,7 @@ class LumbarTrainingDataset(Dataset):
         if self.debug:
             return 20
         else:
-            return 2000
+            return 1000
 
     def __getitem__(self, idx):
         idx = random.randint(0, len(self.xp_pool) - 1)

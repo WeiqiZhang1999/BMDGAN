@@ -5,13 +5,6 @@
 # @File    : DPNRestormer.py
 # @Software: PyCharm
 
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Time    : 2/15/2023 6:01 PM
-# @Author  : ZHANG WEIQI
-# @File    : Restormer.py
-# @Software: PyCharm
-
 
 ## Restormer: Efficient Transformer for High-Resolution Image Restoration
 ## Syed Waqas Zamir, Aditya Arora, Salman Khan, Munawar Hayat, Fahad Shahbaz Khan, and Ming-Hsuan Yang

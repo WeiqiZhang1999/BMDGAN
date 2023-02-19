@@ -363,10 +363,13 @@ class CycleResnetModel(TrainingModelInt):
         return numerator / area
 
     @staticmethod
-    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor,
-                                          space: np.ndarray | torch.Tensor
-                                          ) -> float | np.ndarray | torch.Tensor:
+    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor, space: np.ndarray | torch.Tensor
+                                         ) -> float | np.ndarray | torch.Tensor:
         area = (mask * space).sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
         numerator = image.sum()
         return numerator / area
 

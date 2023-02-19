@@ -17,6 +17,7 @@ from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 
 from Network.model.Restormer.Restormer import Restormer
+from Network.model.Restormer.SCCARestormer import SCCARestormer
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -42,6 +43,7 @@ class RestormerModel(TrainingModelInt):
                  lambda_GC=1.,
                  log_pcc=False,
                  pretrain_stage=False,
+                 mode="normal"
                  ):
 
         self.rank = DDPHelper.rank()
@@ -50,7 +52,12 @@ class RestormerModel(TrainingModelInt):
         self.pretrain_stage = pretrain_stage
 
         # Prepare models
-        self.netG = Restormer(**netG_config).to(self.device)
+        if mode == "normal":
+            self.netG = Restormer(**netG_config).to(self.device)
+        elif mode == "scca":
+            self.netG = SCCARestormer(**netG_config).to(self.device)
+        else:
+            raise NotImplementedError
         self.optimizer_config = optimizer_config
         self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
 

@@ -72,9 +72,14 @@ class TrainingModel(BaseExperiment):
         self.__resume = resume
         self.__model_name = model_name
 
-        self._tb_path = OSHelper.path_join(
-            OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain"),
-            "logs")
+        if self.__model_name.split('.')[-1] == '2':
+            self._tb_path = OSHelper.path_join(
+                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\finetune"),
+                "logs")
+        else:
+            self._tb_path = OSHelper.path_join(
+                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain"),
+                "logs")
 
         self._output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))
         if OSHelper.path_exists(OSHelper.path_join(self._output_dir, "ckp_state.pt")):

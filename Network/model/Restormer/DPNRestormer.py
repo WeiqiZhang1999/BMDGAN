@@ -176,7 +176,9 @@ class OverlapPatchEmbed(nn.Module):
     def forward(self, x):
         x = rearrange(x, 'b c h w -> b h w c')
         x = self.norm1(x)
+        x = rearrange(x, 'b h w c -> b c h w')
         x = self.proj(x)
+        x = rearrange(x, 'b c h w -> b h w c')
         x = self.norm2(x)
         x = rearrange(x, 'b h w c -> b c h w')
 

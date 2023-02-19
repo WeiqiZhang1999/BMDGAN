@@ -187,8 +187,8 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         for case_name in training_case_names:
 
             case_name = case_name[3:]
-            xp_case_name = f"Xp_{case_name}.mhd"
-            drr_case_name = f"DRR_{case_name}_Ensembles.mhd"
+            xp_case_name = f"Xp_{case_name}_AP.mhd"
+            drr_case_name = f"DRR_{case_name}_AP.mhd"
             mask_case_name = drr_case_name
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)

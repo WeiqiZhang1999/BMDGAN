@@ -169,10 +169,16 @@ class OverlapPatchEmbed(nn.Module):
     def __init__(self, in_c=3, embed_dim=48, bias=False):
         super(OverlapPatchEmbed, self).__init__()
 
+        self.norm1 = nn.LayerNorm(in_c)
         self.proj = nn.Conv2d(in_c, embed_dim, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
+        self.norm2 = nn.LayerNorm(embed_dim)
 
     def forward(self, x):
+        x = rearrange(x, 'b c h w -> b h w c')
+        x = self.norm1(x)
         x = self.proj(x)
+        x = self.norm2(x)
+        x = rearrange(x, 'b h w c -> b c h w')
 
         return x
 
@@ -218,9 +224,7 @@ class DPNRestormer(nn.Module):
 
         super(DPNRestormer, self).__init__()
 
-        # self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
-        self.patch_embed = nn.Sequential(nn.LayerNorm(inp_channels), OverlapPatchEmbed(inp_channels, dim),
-                                         nn.LayerNorm(dim))
+        self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
 
         self.encoder_level1 = nn.Sequential(*[
             TransformerBlock(dim=dim, num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias,

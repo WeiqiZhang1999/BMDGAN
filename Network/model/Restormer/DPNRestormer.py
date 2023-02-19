@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2/18/2023 9:22 PM
+# @Time    : 2/19/2023 2:11 PM
 # @Author  : ZHANG WEIQI
-# @File    : SCCARestormer.py
+# @File    : DPNRestormer.py
 # @Software: PyCharm
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time    : 2/15/2023 6:01 PM
@@ -22,7 +23,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from pdb import set_trace as stx
 import numbers
-from .Modules import CrossAttentionBlock
+
 from einops import rearrange
 
 
@@ -202,7 +203,7 @@ class Upsample(nn.Module):
 
 ##########################################################################
 ##---------- Restormer -----------------------
-class SCCARestormer(nn.Module):
+class DPNRestormer(nn.Module):
     def __init__(self,
                  inp_channels=1,
                  out_channels=2,
@@ -212,14 +213,14 @@ class SCCARestormer(nn.Module):
                  heads=[1, 2, 4, 8],
                  ffn_expansion_factor=2.66,
                  bias=False,
-                 height=[256, 128, 64],
-                 width=[128, 64, 32],
                  LayerNorm_type='WithBias',  ## Other option 'BiasFree'
                  ):
 
-        super(SCCARestormer, self).__init__()
+        super(DPNRestormer, self).__init__()
 
-        self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
+        # self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
+        self.patch_embed = nn.Sequential(nn.LayerNorm(inp_channels), OverlapPatchEmbed(inp_channels, dim),
+                                         nn.LayerNorm(dim))
 
         self.encoder_level1 = nn.Sequential(*[
             TransformerBlock(dim=dim, num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias,
@@ -265,14 +266,6 @@ class SCCARestormer(nn.Module):
 
         self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
 
-        self.scca_module_1 = CrossAttentionBlock(in_dim=int(dim), key_dim=int(dim), value_dim=int(dim),
-                                                 height=height[0], width=width[0], head_count=1, token_mlp="mix")
-        self.scca_module_2 = CrossAttentionBlock(in_dim=int(dim * 2), key_dim=int(dim * 2), value_dim=int(dim * 2),
-                                                 height=height[1], width=width[1], head_count=1, token_mlp="mix")
-        self.scca_module_3 = CrossAttentionBlock(in_dim=int(dim * 4), key_dim=int(dim * 4), value_dim=int(dim * 4),
-                                                 height=height[2], width=width[2], head_count=1, token_mlp="mix")
-
-
     def forward(self, inp_img):
 
         inp_enc_level1 = self.patch_embed(inp_img)
@@ -288,20 +281,17 @@ class SCCARestormer(nn.Module):
         latent = self.latent(inp_enc_level4)
 
         inp_dec_level3 = self.up4_3(latent)
-        # inp_dec_level3 = torch.cat([inp_dec_level3, out_enc_level3], 1)
-        inp_dec_level3 = self.scca_module_3(inp_dec_level3, out_enc_level3)
+        inp_dec_level3 = torch.cat([inp_dec_level3, out_enc_level3], 1)
         inp_dec_level3 = self.reduce_chan_level3(inp_dec_level3)
         out_dec_level3 = self.decoder_level3(inp_dec_level3)
 
         inp_dec_level2 = self.up3_2(out_dec_level3)
-        # inp_dec_level2 = torch.cat([inp_dec_level2, out_enc_level2], 1)
-        inp_dec_level2 = self.scca_module_2(inp_dec_level2, out_enc_level2)
+        inp_dec_level2 = torch.cat([inp_dec_level2, out_enc_level2], 1)
         inp_dec_level2 = self.reduce_chan_level2(inp_dec_level2)
         out_dec_level2 = self.decoder_level2(inp_dec_level2)
 
         inp_dec_level1 = self.up2_1(out_dec_level2)
-        # inp_dec_level1 = torch.cat([inp_dec_level1, out_enc_level1], 1)
-        inp_dec_level1 = self.scca_module_1(inp_dec_level1, out_enc_level1)
+        inp_dec_level1 = torch.cat([inp_dec_level1, out_enc_level1], 1)
         out_dec_level1 = self.decoder_level1(inp_dec_level1)
 
         out_dec_level1 = self.refinement(out_dec_level1)

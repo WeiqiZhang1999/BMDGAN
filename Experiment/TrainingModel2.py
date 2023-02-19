@@ -78,7 +78,7 @@ class TrainingModel(BaseExperiment):
                 "logs")
         else:
             self._tb_path = OSHelper.path_join(
-                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain"),
+                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain1"),
                 "logs")
 
         self._output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))

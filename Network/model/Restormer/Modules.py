@@ -8,6 +8,7 @@
 import torch.nn as nn
 import torch
 from einops.layers.torch import Rearrange
+from torch.nn import functional as F
 
 
 class Cross_Attention(nn.Module):

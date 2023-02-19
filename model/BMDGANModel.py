@@ -240,42 +240,42 @@ class BMDGANModel(TrainingModelInt):
 
             for i in [0, 1, 2, 3, 4, 5, 6, 7]:
                 if i == 0:
-                    psnr1 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr1 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim1 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 1:
-                    psnr2 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr2 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim2 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 2:
-                    psnr3 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr3 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim3 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 3:
-                    psnr4 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr4 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim4 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 4:
-                    psnr5 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr5 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim5 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 5:
-                    psnr6 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr6 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim6 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 6:
-                    psnr7 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr7 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim7 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()
                 elif i == 7:
-                    psnr8 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                    psnr8 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                     reduction=None, dim=(1, 2, 3), data_range=255.).sum()
                     ssim8 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
                                                                 reduction=None, data_range=255.).sum()

@@ -340,8 +340,8 @@ class StoTransformerBlock(nn.Module):
     def forward(self, x, mask=None):
         B, L, C = x.shape
 
-        H = round(math.sqrt(L))
-        W = round(math.sqrt(L))
+        H = round(math.sqrt(L * 2))
+        W = round(math.sqrt(L // 2))
 
         shortcut = x
         x = self.norm1(x)

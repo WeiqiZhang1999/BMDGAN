@@ -83,9 +83,10 @@ class CycleResnetModel(TrainingModelInt):
             self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
         else:
             self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 34.88827
+            self.MAX_VAL_DXA_DRR_2k = 36.74824
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 86.04297
+            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
+
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -318,19 +319,12 @@ class CycleResnetModel(TrainingModelInt):
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
         # if resume:
         #     assert strict == True
-        if self.cycle_training:
-            force_strict = False
-            for signature in ["netG", "netD"]:
-                net = getattr(self, signature)
-                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_netG.pt"))
-                TorchHelper.load_network_by_path(net.module, load_path, strict=force_strict)
-                logging.info(f"Model {signature} loaded from {load_path}")
-        else:
-            for signature in ["netG", "netD"]:
-                net = getattr(self, signature)
-                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
-                logging.info(f"Model {signature} loaded from {load_path}")
+        for signature in ["netG", "netD"]:
+            net = getattr(self, signature)
+            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            logging.info(f"Model {signature} loaded from {load_path}")
+
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)

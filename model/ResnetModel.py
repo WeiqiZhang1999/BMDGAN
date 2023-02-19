@@ -88,9 +88,9 @@ class ResnetModel(TrainingModelInt):
             self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
         else:
             self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 34.88827
+            self.MAX_VAL_DXA_DRR_2k = 36.74824
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 86.04297
+            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

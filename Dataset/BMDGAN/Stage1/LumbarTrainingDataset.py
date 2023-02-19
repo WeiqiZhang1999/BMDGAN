@@ -116,7 +116,7 @@ class LumbarTrainingDataset(Dataset):
         if self.debug:
             return 20
         else:
-            return 1000
+            return 2000
 
     def __getitem__(self, idx):
         random.seed(42)

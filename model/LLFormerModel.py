@@ -178,6 +178,22 @@ class LLFormerModel(TrainingModelInt):
         total_count = 0.
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
+        psnr1 = torch.tensor([0.]).to(self.device)
+        ssim1 = torch.tensor([0.]).to(self.device)
+        psnr2 = torch.tensor([0.]).to(self.device)
+        ssim2 = torch.tensor([0.]).to(self.device)
+        psnr3 = torch.tensor([0.]).to(self.device)
+        ssim3 = torch.tensor([0.]).to(self.device)
+        psnr4 = torch.tensor([0.]).to(self.device)
+        ssim4 = torch.tensor([0.]).to(self.device)
+        psnr5 = torch.tensor([0.]).to(self.device)
+        ssim5 = torch.tensor([0.]).to(self.device)
+        psnr6 = torch.tensor([0.]).to(self.device)
+        ssim6 = torch.tensor([0.]).to(self.device)
+        psnr7 = torch.tensor([0.]).to(self.device)
+        ssim7 = torch.tensor([0.]).to(self.device)
+        psnr8 = torch.tensor([0.]).to(self.device)
+        ssim8 = torch.tensor([0.]).to(self.device)
         if self.log_bmd_pcc:
             pcc_l1 = torch.tensor([0.]).to(self.device)
             pcc_l2 = torch.tensor([0.]).to(self.device)
@@ -213,6 +229,48 @@ class LLFormerModel(TrainingModelInt):
                                             reduction=None, dim=(1, 2, 3), data_range=255.).sum()
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
+
+            for i in [0, 1, 2, 3, 4, 5, 6, 7]:
+                if i == 0:
+                    psnr1 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim1 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 1:
+                    psnr2 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim2 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 2:
+                    psnr3 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim3 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 3:
+                    psnr4 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim4 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 4:
+                    psnr5 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim5 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 5:
+                    psnr6 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim6 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 6:
+                    psnr7 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim7 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 7:
+                    psnr8 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :], drrs_[:, i, :, :],
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim8 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
 
             if self.log_bmd_pcc:
                 for i in [0, 1, 2, 3]:
@@ -262,8 +320,74 @@ class LLFormerModel(TrainingModelInt):
             DDPHelper.all_reduce(psnr, DDPHelper.ReduceOp.AVG)
             DDPHelper.all_reduce(ssim, DDPHelper.ReduceOp.AVG)
 
-        ret = {"PSNR": psnr.cpu().numpy(),
-               "SSIM": ssim.cpu().numpy()}
+
+
+        ret = {"PSNR_all": psnr.cpu().numpy(),
+               "SSIM_all": ssim.cpu().numpy()}
+
+        psnr1 /= total_count
+        ssim1 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr1, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim1, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L1_DRR"] = psnr1.cpu().numpy()
+        ret["SSIM_L1_DRR"] = ssim1.cpu().numpy()
+
+        psnr2 /= total_count
+        ssim2 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr2, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim2, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L2_DRR"] = psnr2.cpu().numpy()
+        ret["SSIM_L2_DRR"] = ssim2.cpu().numpy()
+
+        psnr3 /= total_count
+        ssim3 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr3, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim3, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L3_DRR"] = psnr3.cpu().numpy()
+        ret["SSIM_L3_DRR"] = ssim3.cpu().numpy()
+
+        psnr4 /= total_count
+        ssim4 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr4, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim4, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L4_DRR"] = psnr4.cpu().numpy()
+        ret["SSIM_L4_DRR"] = ssim4.cpu().numpy()
+
+        psnr5 /= total_count
+        ssim5 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr5, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim5, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L1_Mask_DRR"] = psnr5.cpu().numpy()
+        ret["SSIM_L1_Mask_DRR"] = ssim5.cpu().numpy()
+
+        psnr6 /= total_count
+        ssim6 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr6, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim6, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L2_Mask_DRR"] = psnr6.cpu().numpy()
+        ret["SSIM_L2_Mask_DRR"] = ssim6.cpu().numpy()
+
+        psnr7 /= total_count
+        ssim7 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr7, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim7, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L3_Mask_DRR"] = psnr7.cpu().numpy()
+        ret["SSIM_L3_Mask_DRR"] = ssim7.cpu().numpy()
+
+        psnr8 /= total_count
+        ssim8 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr8, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim8, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L4_Mask_DRR"] = psnr8.cpu().numpy()
+        ret["SSIM_L4_Mask_DRR"] = ssim8.cpu().numpy()
 
         if self.log_bmd_pcc:
             inference_ai_list_L1 = torch.Tensor(inference_ai_list_L1).view(-1).cpu().numpy()

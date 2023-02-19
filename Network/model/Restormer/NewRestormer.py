@@ -240,8 +240,8 @@ class LeFF(nn.Module):
     def forward(self, x):
         # bs x hw x c
         bs, hw, c = x.size()
-        hh = round(math.sqrt(hw))
-        ww = round(math.sqrt(hw))
+        hh = round(math.sqrt(hw * 2))
+        ww = round(math.sqrt(hw // 2))
 
         x = self.linear1(x)
 

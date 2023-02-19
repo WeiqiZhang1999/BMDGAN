@@ -22,7 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from pdb import set_trace as stx
 import numbers
-from Modules import CrossAttentionBlock
+from .Modules import CrossAttentionBlock
 from einops import rearrange
 
 

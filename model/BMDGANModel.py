@@ -226,7 +226,7 @@ class BMDGANModel(TrainingModelInt):
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
             spaces = data["spacing"].to(self.device)
-            fake_drrs = self.netG(xps)
+            fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)

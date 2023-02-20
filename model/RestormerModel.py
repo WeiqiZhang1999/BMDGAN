@@ -20,6 +20,7 @@ from Network.model.Restormer.Restormer import Restormer
 from Network.model.Restormer.SCCARestormer import SCCARestormer
 from Network.model.Restormer.DPNRestormer import DPNRestormer
 from Network.model.Restormer.NewRestormer import NewRestormer
+from Network.model.Restormer.Restormer2 import Restormer2
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -62,6 +63,8 @@ class RestormerModel(TrainingModelInt):
             self.netG = DPNRestormer(**netG_config).to(self.device)
         elif mode == "new":
             self.netG = NewRestormer(**netG_config).to(self.device)
+        elif mode == "2":
+            self.netG = Restormer2(**netG_config).to(self.device)
         else:
             raise NotImplementedError
         self.optimizer_config = optimizer_config

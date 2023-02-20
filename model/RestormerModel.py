@@ -63,7 +63,7 @@ class RestormerModel(TrainingModelInt):
             self.netG = DPNRestormer(**netG_config).to(self.device)
         elif mode == "new":
             self.netG = NewRestormer(**netG_config).to(self.device)
-        elif mode == "2":
+        elif mode == "sota":
             self.netG = Restormer2(**netG_config).to(self.device)
         else:
             raise NotImplementedError

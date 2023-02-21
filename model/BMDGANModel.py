@@ -480,7 +480,7 @@ class BMDGANModel(TrainingModelInt):
             all_gt_bmds = gt_bmds_L1.tolist() + gt_bmds_L2.tolist() + gt_bmds_L3.tolist() + gt_bmds_L4.tolist()
             all_inference_ai_list = inference_ai_list_L1.tolist() + inference_ai_list_L2.tolist() + inference_ai_list_L3.tolist() + inference_ai_list_L4.tolist()
             pcc_all += pearsonr(all_gt_bmds, all_inference_ai_list)[0]
-            icc_all += self._ICC(all_gt_bmds, all_inference_ai_list)
+            icc_all += self._ICC(np.array(all_gt_bmds), np.array(all_inference_ai_list))
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_all, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_all, DDPHelper.ReduceOp.AVG)

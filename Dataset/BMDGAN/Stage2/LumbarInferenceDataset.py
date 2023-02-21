@@ -195,8 +195,11 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
             all_bmd_list = []
-            all_bmd_list.append(self.bmd_df.loc[case_name, 'CT-vBMD'])
-            self.bmd_pool.append(self.bmd_df.loc[case_name, 'CT-vBMD'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L1'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L2'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L3'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L4'])
+            self.bmd_pool.append(all_bmd_list)
 
             xp_dao = MetaImageDAO(case_name, image_path=case_xp_dir)
             drr_dao = MetaImageDAO(case_name, image_path=case_drr_dir)
@@ -204,13 +207,14 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             self.xp_pool.append(xp_dao)
             self.drr_pool.append(drr_dao)
             self.mask_pool.append(mask_dao)
-        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.mask_pool) > 0
+        assert len(self.xp_pool) > 0 and len(self.drr_pool) > 0 and len(self.mask_pool) > 0 and len(self.bmd_pool) > 0
 
         if self.verbose:
             print("Test Datasets")
             print(f"Xp: {len(self.xp_pool)}")
             print(f"DRR: {len(self.drr_pool)}")
             print(f"Mask: {len(self.mask_pool)}")
+            print(f"DXABMD: {len(self.bmd_pool)}")
 
         if self.preload:
             args = []
@@ -250,7 +254,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         return self.__getitem__(idx)
 
     def __getitem__(self, idx):
-        ct_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
+        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_dao, drr_dao, mask_dao = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
         if self.preload:
             xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
@@ -264,7 +268,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
         return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
-                "case_name": case_name, "CTBMD": ct_bmd}
+                "case_name": case_name, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

@@ -622,7 +622,10 @@ class BMDGANModel(TrainingModelInt):
     def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:
         image_mean = image.sum() / (image > 0.).sum()
         image[image < 0.2 * image_mean] = 0.
-        mask = (image > 0.).astype(image.dtype)
+        if isinstance(image, torch.Tensor):
+            mask = (image > 0.).dtype(image.dtype)
+        else:
+            mask = (image > 0.).astype(image.dtype)
         area = mask.sum()
         if area <= 0.:
             if isinstance(image, torch.Tensor):

@@ -171,13 +171,12 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
 
         self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_AP")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           "20230128_Lumbar_DRRs_perspective_uncalibrated_AP")
+                                           "20230128_Lumbar_DRRs_perspective_calibrated_AP")
         self.mask_root = OSHelper.path_join(self.data_root,
                                             "20230128_Lumbar_DRRs_perspective_binary_mask_AP")
 
-        self.bmd_df_root = OSHelper.path_join(self.data_root, "Spine_data_for_AI_celan_20230119.xlsx")
+        self.bmd_df_root = OSHelper.path_join(self.data_root, "bmd_analyze.xlsx")
         self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
-        self.bmd_df.rename({'Unnamed: 77': 'DXABMD'}, axis=1, inplace=True)
 
 
         self.xp_pool = []
@@ -195,6 +194,8 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)
             case_mask_dir = OSHelper.path_join(self.mask_root, mask_case_name)
 
+            all_bmd_list = []
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'CT-vBMD'])
             self.bmd_pool.append(self.bmd_df.loc[case_name, 'CT-vBMD'])
 
             xp_dao = MetaImageDAO(case_name, image_path=case_xp_dir)

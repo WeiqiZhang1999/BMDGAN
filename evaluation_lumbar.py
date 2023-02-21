@@ -15,7 +15,6 @@ from time import time
 from skimage.metrics import structural_similarity
 import argparse
 from scipy.stats import pearsonr
-import pandas
 
 
 def load_image(load_path, load_size):

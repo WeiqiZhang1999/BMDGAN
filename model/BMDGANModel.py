@@ -17,7 +17,6 @@ import numpy as np
 from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
-
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Network.model.Discriminators import MultiscaleDiscriminator
@@ -96,7 +95,7 @@ class BMDGANModel(TrainingModelInt):
             self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
         else:
             self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 36.74824
+            self.MAX_VAL_DXA_DRR_2k = 48319.90625
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
             self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 
@@ -207,6 +206,10 @@ class BMDGANModel(TrainingModelInt):
             pcc_l2 = torch.tensor([0.]).to(self.device)
             pcc_l3 = torch.tensor([0.]).to(self.device)
             pcc_l4 = torch.tensor([0.]).to(self.device)
+            icc_l1 = torch.tensor([0.]).to(self.device)
+            icc_l2 = torch.tensor([0.]).to(self.device)
+            icc_l3 = torch.tensor([0.]).to(self.device)
+            icc_l4 = torch.tensor([0.]).to(self.device)
             inference_ai_list_L1 = []
             gt_bmds_L1 = []
             inference_ai_list_L2 = []
@@ -215,6 +218,20 @@ class BMDGANModel(TrainingModelInt):
             gt_bmds_L3 = []
             inference_ai_list_L4 = []
             gt_bmds_L4 = []
+            if not self.pretrain_stage:
+                dxa_pcc_l1 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l2 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l3 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l4 = torch.tensor([0.]).to(self.device)
+                fake_dxa_bmd_L1 = []
+                gt_dxa_bmd_L1 = []
+                fake_dxa_bmd_L2 = []
+                gt_dxa_bmd_L2 = []
+                fake_dxa_bmd_L3 = []
+                gt_dxa_bmd_L3 = []
+                fake_dxa_bmd_L4 = []
+                gt_dxa_bmd_L4 = []
+
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -226,6 +243,9 @@ class BMDGANModel(TrainingModelInt):
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
             spaces = data["spacing"].to(self.device)
+            if not self.pretrain_stage:
+                dxa_bmds = data["DXABMD"].to(self.device)
+
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
 
             drrs_ = ImageHelper.denormal(drrs)
@@ -304,21 +324,34 @@ class BMDGANModel(TrainingModelInt):
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L1.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L1.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L1.append(dxa_bmds[j][i])
                         elif i == 1:
                             inference_ai_list_L2.append(
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
+
                             gt_bmds_L2.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L2.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L2.append(dxa_bmds[j][i])
                         elif i == 2:
                             inference_ai_list_L3.append(
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L3.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L3.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L3.append(dxa_bmds[j][i])
                         else:
                             inference_ai_list_L4.append(
                                 self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
                             gt_bmds_L4.append(
                                 self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L4.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L4.append(dxa_bmds[j][i])
 
             total_count += B
 
@@ -401,30 +434,80 @@ class BMDGANModel(TrainingModelInt):
             inference_ai_list_L1 = torch.Tensor(inference_ai_list_L1).view(-1).cpu().numpy()
             gt_bmds_L1 = torch.Tensor(gt_bmds_L1).view(-1).cpu().numpy()
             pcc_l1 += pearsonr(gt_bmds_L1, inference_ai_list_L1)[0]
+            icc_l1 += self._ICC(gt_bmds_L1, inference_ai_list_L1)
+
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
-            ret["L1_Intensity_PCC"] = pcc_l1
+                DDPHelper.all_reduce(icc_l1, DDPHelper.ReduceOp.AVG)
+
+            ret["L1_CT-aBMD_PCC"] = pcc_l1
+            ret["L1_CT-aBMD_ICC"] = icc_l1
 
             inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
             gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
             pcc_l2 += pearsonr(gt_bmds_L2, inference_ai_list_L2)[0]
+            icc_l2 += self._ICC(gt_bmds_L2, inference_ai_list_L2)
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
-            ret["L2_Intensity_PCC"] = pcc_l2
+                DDPHelper.all_reduce(icc_l2, DDPHelper.ReduceOp.AVG)
+            ret["L2_CT-aBMD_PCC"] = pcc_l2
+            ret["L2_CT-aBMD_ICC"] = icc_l2
 
             inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
             gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
             pcc_l3 += pearsonr(gt_bmds_L3, inference_ai_list_L3)[0]
+            icc_l3 += self._ICC(gt_bmds_L3, inference_ai_list_L3)
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
-            ret["L3_Intensity_PCC"] = pcc_l3
+                DDPHelper.all_reduce(icc_l3, DDPHelper.ReduceOp.AVG)
+            ret["L3_CT-aBMD_PCC"] = pcc_l3
+            ret["L3_CT-aBMD_ICC"] = icc_l3
 
             inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
             gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
             pcc_l4 += pearsonr(gt_bmds_L4, inference_ai_list_L4)[0]
+            icc_l4 += self._ICC(gt_bmds_L4, inference_ai_list_L4)
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
-            ret["L4_Intensity_PCC"] = pcc_l4
+                DDPHelper.all_reduce(icc_l4, DDPHelper.ReduceOp.AVG)
+            ret["L4_CT-aBMD_PCC"] = pcc_l4
+            ret["L4_CT-aBMD_ICC"] = icc_l4
+
+        if not self.pretrain_stage:
+            fake_dxa_bmd_L1 = torch.Tensor(fake_dxa_bmd_L1).view(-1).cpu().numpy()
+            gt_dxa_bmd_L1 = torch.Tensor(gt_dxa_bmd_L1).view(-1).cpu().numpy()
+            dxa_pcc_l1 += pearsonr(gt_dxa_bmd_L1, fake_dxa_bmd_L1)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l1, DDPHelper.ReduceOp.AVG)
+
+            ret["L1_DXABMD_PCC"] = dxa_pcc_l1
+
+            fake_dxa_bmd_L2 = torch.Tensor(fake_dxa_bmd_L2).view(-1).cpu().numpy()
+            gt_dxa_bmd_L2 = torch.Tensor(gt_dxa_bmd_L2).view(-1).cpu().numpy()
+            dxa_pcc_l2 += pearsonr(gt_dxa_bmd_L2, fake_dxa_bmd_L2)[0]
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l2, DDPHelper.ReduceOp.AVG)
+
+            ret["L2_DXABMD_PCC"] = dxa_pcc_l2
+
+            fake_dxa_bmd_L3 = torch.Tensor(fake_dxa_bmd_L3).view(-1).cpu().numpy()
+            gt_dxa_bmd_L3 = torch.Tensor(gt_dxa_bmd_L3).view(-1).cpu().numpy()
+            dxa_pcc_l3 += pearsonr(gt_dxa_bmd_L3, fake_dxa_bmd_L3)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l3, DDPHelper.ReduceOp.AVG)
+
+            ret["L3_DXABMD_PCC"] = dxa_pcc_l3
+
+            fake_dxa_bmd_L4 = torch.Tensor(fake_dxa_bmd_L4).view(-1).cpu().numpy()
+            gt_dxa_bmd_L4 = torch.Tensor(gt_dxa_bmd_L4).view(-1).cpu().numpy()
+            dxa_pcc_l4 += pearsonr(gt_dxa_bmd_L4, fake_dxa_bmd_L4)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l4, DDPHelper.ReduceOp.AVG)
+
+            ret["L4_DXABMD_PCC"] = dxa_pcc_l4
 
         return ret
 
@@ -510,6 +593,29 @@ class BMDGANModel(TrainingModelInt):
             return 0.
         numerator = image.sum()
         return numerator / area
+
+    @staticmethod
+    def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:
+        image_mean = image.sum() / (image > 0.).sum()
+        image[image < 0.2 * image_mean] = 0.
+        mask = (image > 0.).astype(image.dtype)
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = image.sum()
+        return numerator / area
+
+    @staticmethod
+    def _ICC(pred_values: np.ndarray, y_values: np.ndarray) -> float:
+        assert isinstance(pred_values, np.ndarray) and isinstance(y_values, np.ndarray)
+        assert pred_values.ndim == 1 and y_values.ndim == 1
+        n = len(pred_values)
+        assert n == len(y_values)
+        mean = np.mean(pred_values) / 2. + np.mean(y_values) / 2.
+        s2 = (np.sum((pred_values - mean) ** 2) + np.sum((y_values - mean) ** 2)) / (2. * n)
+        return np.sum((pred_values - mean) * (y_values - mean)) / (n * s2)
 
 
 class BMDGANModelInference(InferenceModelInt):

@@ -185,7 +185,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
 
         self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_AP")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           "20230128_Lumbar_DRRs_perspective_uncalibrated_AP")
+                                           "20230128_Lumbar_DRRs_perspective_calibrated_AP")
         self.mask_root = OSHelper.path_join(self.data_root,
                                             "20230128_Lumbar_DRRs_perspective_binary_mask_AP")
 

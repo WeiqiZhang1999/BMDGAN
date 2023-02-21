@@ -220,8 +220,6 @@ class BMDGANModel(TrainingModelInt):
             gt_bmds_L3 = []
             inference_ai_list_L4 = []
             gt_bmds_L4 = []
-            all_inference_ai_list = []
-            all_gt_bmds = []
             if not self.pretrain_stage:
                 dxa_pcc_l1 = torch.tensor([0.]).to(self.device)
                 dxa_pcc_l2 = torch.tensor([0.]).to(self.device)
@@ -236,8 +234,7 @@ class BMDGANModel(TrainingModelInt):
                 gt_dxa_bmd_L3 = []
                 fake_dxa_bmd_L4 = []
                 gt_dxa_bmd_L4 = []
-                all_fake_dxa_bmd = []
-                all_gt_dxa_bmd = []
+
 
 
         if self.rank == 0:
@@ -480,8 +477,8 @@ class BMDGANModel(TrainingModelInt):
             ret["L4_CT-aBMD_PCC"] = pcc_l4
             ret["L4_CT-aBMD_ICC"] = icc_l4
 
-            all_gt_bmds = gt_bmds_L1 + gt_bmds_L2 + gt_bmds_L3 + gt_bmds_L4
-            all_inference_ai_list = inference_ai_list_L1 + inference_ai_list_L2 + inference_ai_list_L3 + inference_ai_list_L4
+            all_gt_bmds = gt_bmds_L1.tolist() + gt_bmds_L2.tolist() + gt_bmds_L3.tolist() + gt_bmds_L4.tolist()
+            all_inference_ai_list = inference_ai_list_L1.tolist() + inference_ai_list_L2.tolist() + inference_ai_list_L3.tolist() + inference_ai_list_L4.tolist()
             pcc_all += pearsonr(all_gt_bmds, all_inference_ai_list)[0]
             icc_all += self._ICC(all_gt_bmds, all_inference_ai_list)
             if DDPHelper.is_initialized():
@@ -527,8 +524,8 @@ class BMDGANModel(TrainingModelInt):
 
             ret["L4_DXABMD_PCC"] = dxa_pcc_l4
 
-            all_gt_dxa_bmd = gt_dxa_bmd_L1 + gt_dxa_bmd_L2 + gt_dxa_bmd_L3 + gt_dxa_bmd_L4
-            all_fake_dxa_bmd = fake_dxa_bmd_L1 + fake_dxa_bmd_L2 + fake_dxa_bmd_L3 + fake_dxa_bmd_L4
+            all_gt_dxa_bmd = gt_dxa_bmd_L1.tolist() + gt_dxa_bmd_L2.tolist() + gt_dxa_bmd_L3.tolist() + gt_dxa_bmd_L4.tolist()
+            all_fake_dxa_bmd = fake_dxa_bmd_L1.tolist() + fake_dxa_bmd_L2.tolist() + fake_dxa_bmd_L3.tolist() + fake_dxa_bmd_L4.tolist()
 
             dxa_pcc_all += pearsonr(all_gt_dxa_bmd, all_fake_dxa_bmd)[0]
             if DDPHelper.is_initialized():

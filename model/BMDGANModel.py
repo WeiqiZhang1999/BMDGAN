@@ -623,7 +623,7 @@ class BMDGANModel(TrainingModelInt):
         image_mean = image.sum() / (image > 0.).sum()
         image[image < 0.2 * image_mean] = 0.
         if isinstance(image, torch.Tensor):
-            mask = (image > 0.).dtype(image.dtype)
+            mask = torch.tensor((image > 0.), dtype=image.dtype)
         else:
             mask = (image > 0.).astype(image.dtype)
         area = mask.sum()

@@ -119,7 +119,6 @@ class BMDGANModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        print(xp.shape, "training")
         fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))

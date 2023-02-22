@@ -13,7 +13,7 @@ import numpy as np
 
 class LumbarVisualDataset(Dataset):
 
-    def __init__(self, infer_dataset: LumbarInferenceDataset, batch_size=6, verbose=False):
+    def __init__(self, infer_dataset: LumbarInferenceDataset, batch_size=20, verbose=False):
         super().__init__()
         self.backbone_dataset = infer_dataset
         self.batch_size = batch_size

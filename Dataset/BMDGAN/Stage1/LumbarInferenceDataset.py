@@ -33,9 +33,11 @@ class LumbarInferenceDataset(Dataset):
                  image_size: tuple[int, int],
                  n_worker,
                  view='AP',
+                 center_crop=False,
                  debug=False,
                  preload=True,
                  verbose=False):
+        self.center_crop = center_crop
         self.split_fold = split_fold
         self.image_size = image_size
         self.n_worker = n_worker
@@ -144,6 +146,10 @@ class LumbarInferenceDataset(Dataset):
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
             mask, _ = self._load_image(mask_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
+        if self.center_crop:
+            xp = ImageHelper.center_cropping(xp, 1.0)
+            drr = ImageHelper.center_cropping(drr, 1.0)
+            mask = ImageHelper.center_cropping(mask, 1.0)
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 

@@ -25,9 +25,11 @@ class LumbarTrainingDataset(Dataset):
                  aug_conf: str,
                  n_worker,
                  view='AP',
+                 center_crop=False,
                  debug=False,
                  preload=True,
                  verbose=False):
+        self.center_crop = center_crop
         self.split_fold = split_fold
         self.image_size = image_size
         self.load_size = load_size
@@ -176,26 +178,14 @@ class LumbarTrainingDataset(Dataset):
         height_shift_range=0.3,
         zoom_range=0.3,
         lock_zoom_ratio=False
-    ),
-        "cropped_paired_synthesis": dict(
-            brightness_range=(0.5, 1.5),
-            contrast_range=(0.5, 1.5),
-            horizontal_flip=True,
-            vertical_flip=True,
-            rotation_range=25,
-            shear_range=8,
-            width_shift_range=0.3,
-            height_shift_range=0.3,
-            zoom_range=0.3,
-            lock_zoom_ratio=False,
-            center_crop=True
-        )
-    }
+    )}
 
-    def pre_process(self, drr):
-        drr = ImageHelper.resize(drr, self.image_size) / 255.
-        drr = ImageHelper.standardize(drr, 0.5, 0.5)
-        drr = np.clip(drr, -1., 1.)
-        drr = drr.astype(np.float32)
-        drr = np.transpose(drr, (2, 0, 1))
-        return drr
+    def pre_process(self, img):
+        img = ImageHelper.resize(img, self.image_size) / 255.
+        img = ImageHelper.standardize(img, 0.5, 0.5)
+        img = np.clip(img, -1., 1.)
+        img = img.astype(np.float32)
+        img = np.transpose(img, (2, 0, 1))
+        if self.center_crop:
+            img = ImageHelper.center_cropping(img, 1.0)
+        return img

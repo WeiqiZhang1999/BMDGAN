@@ -142,10 +142,22 @@ class LumbarInferenceDataset(Dataset):
             xp, drr, mask = xp_dao.image_data.copy(), drr_dao.image_data.copy(), mask_dao.image_data.copy()
             spacing = drr_dao.spacing.copy()
         else:
-            xp, spacing = self._load_image(xp_dao.image_path, self.image_size)
+            xp, spacing = self._load_image(xp_dao.image_path, self.image_size)  # (1, H, W)
             drr, _ = self._load_image(drr_dao.image_path, self.image_size)
             mask, _ = self._load_image(mask_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
+        if self._center_crop:
+            xp = np.transpose(xp, (1, 2, 0))  # (H, W, 1)
+            xp = ImageHelper.center_cropping(xp, 1.0)
+            xp = np.transpose(xp, (2, 0, 1))  # (1, H, W)
+
+            drr = np.transpose(drr, (1, 2, 0))  # (H, W, 1)
+            drr = ImageHelper.center_cropping(drr, 1.0)
+            drr = np.transpose(drr, (2, 0, 1))  # (1, H, W)
+
+            mask = np.transpose(mask, (1, 2, 0))  # (H, W, 1)
+            mask = ImageHelper.center_cropping(mask, 1.0)
+            mask = np.transpose(mask, (2, 0, 1))  # (1, H, W)
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 

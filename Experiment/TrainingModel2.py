@@ -148,7 +148,7 @@ class TrainingModel(BaseExperiment):
 
         first_epoch = True
         if rank == 0:
-            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self.__model_name))))
+            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self.__model_name), str(self._split_fold))))
             # tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self._split_fold))))
         while True:
             if self.__scheduler_config["policy"] != "infinite":

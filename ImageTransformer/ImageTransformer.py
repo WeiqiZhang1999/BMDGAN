@@ -213,7 +213,8 @@ class ImageTransformer:
                                 'flip_vertical': flip_vertical,
                                 'channel_shift_intensity': channel_shift_intensity,
                                 'brightness': brightness,
-                                'contrast': contrast}
+                                'contrast': contrast,
+                                "center_crop": self.center_crop}
 
         return transform_parameters
 

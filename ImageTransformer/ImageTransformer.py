@@ -277,8 +277,7 @@ class ImageTransformer:
 
         if transform_parameters.get('contrast') is not None:
             x = ImageHelper.contrast(x, transform_parameters['contrast'])
-        if self.center_crop:
-            x = ImageHelper.center_cropping(x)
+
         return x
 
     @staticmethod

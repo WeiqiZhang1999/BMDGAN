@@ -118,6 +118,9 @@ class LumbarTrainingDataset(Dataset):
         else:
             return 2000
 
+    def get_item(self, idx):
+        return self.__getitem__(idx)
+
     def __getitem__(self, idx):
         idx = random.randint(0, len(self.xp_pool) - 1)
         xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
@@ -173,7 +176,21 @@ class LumbarTrainingDataset(Dataset):
         height_shift_range=0.3,
         zoom_range=0.3,
         lock_zoom_ratio=False
-    )}
+    ),
+        "cropped_paired_synthesis": dict(
+            # brightness_range=(0.5, 1.5),
+            # contrast_range=(0.5, 1.5),
+            # horizontal_flip=True,
+            # vertical_flip=True,
+            # rotation_range=25,
+            # shear_range=8,
+            # width_shift_range=0.3,
+            # height_shift_range=0.3,
+            # zoom_range=0.3,
+            # lock_zoom_ratio=False,
+            center_crop=True
+        )
+    }
 
     def pre_process(self, drr):
         drr = ImageHelper.resize(drr, self.image_size) / 255.

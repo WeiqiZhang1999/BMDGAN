@@ -61,6 +61,7 @@ class ImageTransformer:
                  dtype="float64",
                  brightness_range=None,
                  contrast_range=None,
+                 center_crop=False,
                  ):
         self.rotation_range = rotation_range
         self.width_shift_range = width_shift_range
@@ -75,6 +76,7 @@ class ImageTransformer:
         self.vertical_flip = vertical_flip
         self.dtype = dtype
         self.interpolation_order = interpolation_order
+        self.center_crop = center_crop
 
         if data_format not in {'channels_last', 'channels_first'}:
             raise ValueError(
@@ -274,6 +276,8 @@ class ImageTransformer:
 
         if transform_parameters.get('contrast') is not None:
             x = ImageHelper.contrast(x, transform_parameters['contrast'])
+        if transform_parameters.get('center_crop') is not None:
+            x = ImageHelper.center_cropping(x)
         return x
 
     @staticmethod

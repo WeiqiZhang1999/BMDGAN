@@ -74,7 +74,7 @@ class TrainingModel(BaseExperiment):
 
         if self.__model_name.split('_')[-1] == '2':
             self._tb_path = OSHelper.path_join(
-                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\finetune2"),
+                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\finetune"),
                 "logs")
         else:
             self._tb_path = OSHelper.path_join(

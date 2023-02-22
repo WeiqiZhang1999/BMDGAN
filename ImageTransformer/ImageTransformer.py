@@ -214,7 +214,7 @@ class ImageTransformer:
                                 'channel_shift_intensity': channel_shift_intensity,
                                 'brightness': brightness,
                                 'contrast': contrast,
-                                "center_crop": self.center_crop}
+                                }
 
         return transform_parameters
 
@@ -277,7 +277,7 @@ class ImageTransformer:
 
         if transform_parameters.get('contrast') is not None:
             x = ImageHelper.contrast(x, transform_parameters['contrast'])
-        if transform_parameters.get('center_crop') is not None:
+        if self.center_crop:
             x = ImageHelper.center_cropping(x)
         return x
 

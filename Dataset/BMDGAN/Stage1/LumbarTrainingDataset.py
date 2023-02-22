@@ -178,16 +178,16 @@ class LumbarTrainingDataset(Dataset):
         lock_zoom_ratio=False
     ),
         "cropped_paired_synthesis": dict(
-            # brightness_range=(0.5, 1.5),
-            # contrast_range=(0.5, 1.5),
-            # horizontal_flip=True,
-            # vertical_flip=True,
-            # rotation_range=25,
-            # shear_range=8,
-            # width_shift_range=0.3,
-            # height_shift_range=0.3,
-            # zoom_range=0.3,
-            # lock_zoom_ratio=False,
+            brightness_range=(0.5, 1.5),
+            contrast_range=(0.5, 1.5),
+            horizontal_flip=True,
+            vertical_flip=True,
+            rotation_range=25,
+            shear_range=8,
+            width_shift_range=0.3,
+            height_shift_range=0.3,
+            zoom_range=0.3,
+            lock_zoom_ratio=False,
             center_crop=True
         )
     }

@@ -185,7 +185,7 @@ class LumbarTrainingDataset(Dataset):
         img = ImageHelper.standardize(img, 0.5, 0.5)
         img = np.clip(img, -1., 1.)
         img = img.astype(np.float32)
-        img = np.transpose(img, (2, 0, 1))
         if self.center_crop:
             img = ImageHelper.center_cropping(img, 1.0)
+        img = np.transpose(img, (2, 0, 1))
         return img

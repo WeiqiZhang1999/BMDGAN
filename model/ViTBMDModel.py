@@ -41,7 +41,6 @@ class ViTBMDModel(TrainingModelInt):
     def __init__(self,
                  optimizer_config,
                  encoder_config,
-                 # quantizer_config,
                  decoder_config,
                  image_size: int,
                  patch_size: int,
@@ -62,24 +61,17 @@ class ViTBMDModel(TrainingModelInt):
         # Prepare models
         self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config).to(self.device)
         self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config).to(self.device)
-        # self.quantizer = VectorQuantizer(**quantizer_config).to(self.device)
-        # self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim).to(self.device)
-        # self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim).to(self.device)
         self.optimizer_config = optimizer_config
 
         self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
 
         if self.rank == 0:
-            # self.pre_quant.apply(weights_init)
-            # self.post_quant.apply(weights_init)
             self.netD.apply(weights_init)
 
         # Wrap DDP
-        self.encoder = DDPHelper.shell_ddp(self.encoder)
-        self.decoder = DDPHelper.shell_ddp(self.decoder)
-        # self.pre_quant = DDPHelper.shell_ddp(self.pre_quant)
-        # self.post_quant = DDPHelper.shell_ddp(self.post_quant)
-        self.netD = DDPHelper.shell_ddp(self.netD)
+        # self.encoder = DDPHelper.shell_ddp(self.encoder)
+        # self.decoder = DDPHelper.shell_ddp(self.decoder)
+        # self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
@@ -104,50 +96,13 @@ class ViTBMDModel(TrainingModelInt):
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
             self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 
-    # def forward(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-    #     quant, diff = self.encode(x)
-    #     dec = self.decode(quant)
-    #
-    #     return dec, diff
-    #
-    # def encode(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-    #     h = self.encoder(x)
-    #     h = self.pre_quant(h)
-    #     quant, emb_loss, _ = self.quantizer(h)
-    #
-    #     return quant, emb_loss
-    #
-    # def decode(self, quant: torch.FloatTensor) -> torch.FloatTensor:
-    #     quant = self.post_quant(quant)
-    #     dec = self.decoder(quant)
-    #
-    #     return dec
-    #
-    # def encode_codes(self, x: torch.FloatTensor) -> torch.LongTensor:
-    #     h = self.encoder(x)
-    #     h = self.pre_quant(h)
-    #     _, _, codes = self.quantizer(h)
-    #
-    #     return codes
-    #
-    # def decode_codes(self, code: torch.LongTensor) -> torch.FloatTensor:
-    #     quant = self.quantizer.embedding(code)
-    #     quant = self.quantizer.norm(quant)
-    #
-    #     if self.quantizer.use_residual:
-    #         quant = quant.sum(-2)
-    #
-    #     dec = self.decode(quant)
-    #
-    #     return dec
-
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        self.decoder.module.parameters()),
+        self.netG_optimizer = optimizer(itertools.chain(self.encoder.parameters(),
+                                                        self.decoder.parameters()),
                                         **self.optimizer_config)
 
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
@@ -167,17 +122,9 @@ class ViTBMDModel(TrainingModelInt):
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
-        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
+        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.num_D
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
-
-        # content_fake, vq_fake = self.encode(xp)
-        # content_gt, vq_gt = self.encode(drr)
-        # # vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
-        # #           torch.abs(content_gt - content_fake).mean() * 0.5
-        # vq_loss = torch.abs(vq_gt - vq_fake).mean()
-        # log["G_VQ"] = vq_loss.detach()
-        # G_loss = G_loss + vq_loss * self.lambda_VQ
 
         if self.lambda_AE > 0.:
             ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
@@ -186,8 +133,8 @@ class ViTBMDModel(TrainingModelInt):
 
         if self.lambda_FM > 0.:
             fm_loss = calculate_FM_loss(D_pred_fake, D_pred_real,
-                                        self.netD.module.n_layer,
-                                        self.netD.module.num_D)
+                                        self.netD.n_layer,
+                                        self.netD.num_D)
             log["G_FM"] = fm_loss.detach()
             G_loss = G_loss + fm_loss * self.lambda_FM
 
@@ -206,8 +153,8 @@ class ViTBMDModel(TrainingModelInt):
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
-        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.module.num_D
-        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.module.num_D
+        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.num_D
+        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.num_D
         log["D_real"] = d_loss_real.detach()
         log["D_fake"] = d_loss_fake.detach()
         D_loss = D_loss + d_loss_real * 0.5 + d_loss_fake * 0.5
@@ -217,13 +164,13 @@ class ViTBMDModel(TrainingModelInt):
     def train_batch(self, data, batch_id, epoch):
         g_loss, d_loss, log = self.__compute_loss(data)
 
-        TorchHelper.set_requires_grad(self.netD.module, False)
+        TorchHelper.set_requires_grad(self.netD, False)
         self.netG_optimizer.zero_grad()
         self.netG_grad_scaler.scale(g_loss).backward()
         self.netG_grad_scaler.step(self.netG_optimizer)
         self.netG_grad_scaler.update()
 
-        TorchHelper.set_requires_grad(self.netD.module, True)
+        TorchHelper.set_requires_grad(self.netD, True)
         self.netD_optimizer.zero_grad()
         self.netD_grad_scaler.scale(d_loss).backward()
         self.netD_grad_scaler.step(self.netD_optimizer)
@@ -624,10 +571,7 @@ class ViTBMDModel(TrainingModelInt):
         # for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            if signature == "quantizer":
-                TorchHelper.load_network_by_path(net, load_path, strict=strict)
-            else:
-                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            TorchHelper.load_network_by_path(net, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
             # print(f"Model {signature} loaded from {load_path}")
 
@@ -639,18 +583,18 @@ class ViTBMDModel(TrainingModelInt):
             if signature == "quantizer":
                 torch.save(net.state_dict(), save_path)
             else:
-                torch.save(net.module.state_dict(), save_path)
+                torch.save(net.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):
         if train:
             for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
-                net.module.train()
+                net.train()
         else:
             for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
-                net.module.eval()
+                net.eval()
 
 
     def on_train_batch_end(self, *args, **kwargs):

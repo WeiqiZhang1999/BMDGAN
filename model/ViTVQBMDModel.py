@@ -57,6 +57,7 @@ class ViTVQBMDModel(TrainingModelInt):
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
+        self.pretrain_stage = pretrain_stage
 
         # Prepare models
         self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config).to(self.device)
@@ -66,11 +67,9 @@ class ViTVQBMDModel(TrainingModelInt):
         self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim).to(self.device)
         self.optimizer_config = optimizer_config
 
-        self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
+        self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
 
         if self.rank == 0:
-            # self.encoder.apply(weights_init)
-            # self.decoder.apply(weights_init)
             self.pre_quant.apply(weights_init)
             self.post_quant.apply(weights_init)
             self.netD.apply(weights_init)
@@ -94,9 +93,16 @@ class ViTVQBMDModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        self.MIN_VAL_DXA_DRR_315 = 0.
-        self.MAX_VAL_DXA_DRR_315 = 40398.234376
-        self.THRESHOLD_DXA_BMD_315 = 1591.5
+        if self.pretrain_stage:
+            self.MIN_VAL_DXA_DRR_2k = 0.
+            self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
+            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+            self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
+        else:
+            self.MIN_VAL_DXA_DRR_2k = 0.
+            self.MAX_VAL_DXA_DRR_2k = 48319.90625
+            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 
     def forward(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
         quant, diff = self.encode(x)
@@ -189,9 +195,17 @@ class ViTVQBMDModel(TrainingModelInt):
             G_loss = G_loss + fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0.:
-            gc_loss = self.crit_GC(drr, fake_drr)
+            gc_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
+            for i in [0, 1, 2, 3]:
+                drr0 = drr[:, i, :, :].unsqueeze(1)
+                fake_drr0 = fake_drr[:, i, :, :].unsqueeze(1)
+                drr1 = drr[:, i + 4, :, :].unsqueeze(1)
+                fake_drr1 = fake_drr[:, i + 4, :, :].unsqueeze(1)
+                gc_loss_1 = self.crit_GC(drr0, fake_drr0) * 0.125
+                gc_loss_2 = self.crit_GC(drr1, fake_drr1) * 0.125
+                gc_loss += gc_loss_1 + gc_loss_2
             log["G_GC"] = gc_loss.detach()
-            G_loss = G_loss + gc_loss * self.lambda_GC
+            G_loss += gc_loss * self.lambda_GC
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
@@ -220,15 +234,63 @@ class ViTVQBMDModel(TrainingModelInt):
 
         return log
 
+
     @torch.no_grad()
     def eval_epoch(self, dataloader, desc):
         total_count = 0.
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
+        psnr1 = torch.tensor([0.]).to(self.device)
+        ssim1 = torch.tensor([0.]).to(self.device)
+        psnr2 = torch.tensor([0.]).to(self.device)
+        ssim2 = torch.tensor([0.]).to(self.device)
+        psnr3 = torch.tensor([0.]).to(self.device)
+        ssim3 = torch.tensor([0.]).to(self.device)
+        psnr4 = torch.tensor([0.]).to(self.device)
+        ssim4 = torch.tensor([0.]).to(self.device)
+        psnr5 = torch.tensor([0.]).to(self.device)
+        ssim5 = torch.tensor([0.]).to(self.device)
+        psnr6 = torch.tensor([0.]).to(self.device)
+        ssim6 = torch.tensor([0.]).to(self.device)
+        psnr7 = torch.tensor([0.]).to(self.device)
+        ssim7 = torch.tensor([0.]).to(self.device)
+        psnr8 = torch.tensor([0.]).to(self.device)
+        ssim8 = torch.tensor([0.]).to(self.device)
         if self.log_bmd_pcc:
-            pcc = torch.tensor([0.]).to(self.device)
-            inference_ai_list = []
-            gt_bmds = []
+            pcc_l1 = torch.tensor([0.]).to(self.device)
+            pcc_l2 = torch.tensor([0.]).to(self.device)
+            pcc_l3 = torch.tensor([0.]).to(self.device)
+            pcc_l4 = torch.tensor([0.]).to(self.device)
+            pcc_all = torch.tensor([0.]).to(self.device)
+            icc_l1 = torch.tensor([0.]).to(self.device)
+            icc_l2 = torch.tensor([0.]).to(self.device)
+            icc_l3 = torch.tensor([0.]).to(self.device)
+            icc_l4 = torch.tensor([0.]).to(self.device)
+            icc_all = torch.tensor([0.]).to(self.device)
+            inference_ai_list_L1 = []
+            gt_bmds_L1 = []
+            inference_ai_list_L2 = []
+            gt_bmds_L2 = []
+            inference_ai_list_L3 = []
+            gt_bmds_L3 = []
+            inference_ai_list_L4 = []
+            gt_bmds_L4 = []
+            if not self.pretrain_stage:
+                dxa_pcc_l1 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l2 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l3 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_l4 = torch.tensor([0.]).to(self.device)
+                dxa_pcc_all = torch.tensor([0.]).to(self.device)
+                fake_dxa_bmd_L1 = []
+                gt_dxa_bmd_L1 = []
+                fake_dxa_bmd_L2 = []
+                gt_dxa_bmd_L2 = []
+                fake_dxa_bmd_L3 = []
+                gt_dxa_bmd_L3 = []
+                fake_dxa_bmd_L4 = []
+                gt_dxa_bmd_L4 = []
+
+
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -239,6 +301,10 @@ class ViTVQBMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
+            spaces = data["spacing"].to(self.device)
+            if not self.pretrain_stage:
+                dxa_bmds = data["DXABMD"].to(self.device)
+
             fake_drrs, _ = self.forward(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
@@ -251,13 +317,101 @@ class ViTVQBMDModel(TrainingModelInt):
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
 
+            for i in [0, 1, 2, 3, 4, 5, 6, 7]:
+                if i == 0:
+                    psnr1 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim1 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 1:
+                    psnr2 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim2 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 2:
+                    psnr3 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim3 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 3:
+                    psnr4 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim4 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 4:
+                    psnr5 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim5 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 5:
+                    psnr6 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim6 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 6:
+                    psnr7 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim7 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+                elif i == 7:
+                    psnr8 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
+                    ssim8 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
+                                                                reduction=None, data_range=255.).sum()
+
             if self.log_bmd_pcc:
-                fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
-                fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
-                for i in range(B):
-                    inference_ai_list.append(
-                        self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
-                gt_bmds.append(data["DXABMD"].view(-1))
+                for i in [0, 1, 2, 3]:
+                    gt_drrs_ = drrs[:, i, :, :].unsqueeze(1)
+                    gt_masks_ = drrs[:, i + 4, :, :].unsqueeze(1)
+                    gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
+                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
+                    gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
+
+                    fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
+                    fake_masks_ = fake_drrs[:, i + 4, :, :].unsqueeze(1)
+                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
+                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
+                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
+                    for j in range(B):
+                        space = spaces[j][1] * spaces[j][2]
+                        if i == 0:
+                            inference_ai_list_L1.append(
+                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
+                            gt_bmds_L1.append(
+                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L1.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L1.append(dxa_bmds[j][i])
+                        elif i == 1:
+                            inference_ai_list_L2.append(
+                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
+
+                            gt_bmds_L2.append(
+                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L2.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L2.append(dxa_bmds[j][i])
+                        elif i == 2:
+                            inference_ai_list_L3.append(
+                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
+                            gt_bmds_L3.append(
+                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L3.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L3.append(dxa_bmds[j][i])
+                        else:
+                            inference_ai_list_L4.append(
+                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
+                            gt_bmds_L4.append(
+                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
+                            if not self.pretrain_stage:
+                                fake_dxa_bmd_L4.append(self._calc_average_intensity_with_meanTH(fake_drrs_[j]))
+                                gt_dxa_bmd_L4.append(dxa_bmds[j][i])
+
             total_count += B
 
         psnr /= total_count
@@ -266,17 +420,176 @@ class ViTVQBMDModel(TrainingModelInt):
             DDPHelper.all_reduce(psnr, DDPHelper.ReduceOp.AVG)
             DDPHelper.all_reduce(ssim, DDPHelper.ReduceOp.AVG)
 
-        ret = {"PSNR": psnr.cpu().numpy(),
-               "SSIM": ssim.cpu().numpy()}
+
+
+        ret = {"PSNR_all": psnr.cpu().numpy(),
+               "SSIM_all": ssim.cpu().numpy()}
+
+        psnr1 /= total_count
+        ssim1 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr1, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim1, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L1_DRR"] = psnr1.cpu().numpy()
+        ret["SSIM_L1_DRR"] = ssim1.cpu().numpy()
+
+        psnr2 /= total_count
+        ssim2 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr2, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim2, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L2_DRR"] = psnr2.cpu().numpy()
+        ret["SSIM_L2_DRR"] = ssim2.cpu().numpy()
+
+        psnr3 /= total_count
+        ssim3 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr3, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim3, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L3_DRR"] = psnr3.cpu().numpy()
+        ret["SSIM_L3_DRR"] = ssim3.cpu().numpy()
+
+        psnr4 /= total_count
+        ssim4 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr4, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim4, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L4_DRR"] = psnr4.cpu().numpy()
+        ret["SSIM_L4_DRR"] = ssim4.cpu().numpy()
+
+        psnr5 /= total_count
+        ssim5 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr5, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim5, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L1_Mask_DRR"] = psnr5.cpu().numpy()
+        ret["SSIM_L1_Mask_DRR"] = ssim5.cpu().numpy()
+
+        psnr6 /= total_count
+        ssim6 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr6, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim6, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L2_Mask_DRR"] = psnr6.cpu().numpy()
+        ret["SSIM_L2_Mask_DRR"] = ssim6.cpu().numpy()
+
+        psnr7 /= total_count
+        ssim7 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr7, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim7, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L3_Mask_DRR"] = psnr7.cpu().numpy()
+        ret["SSIM_L3_Mask_DRR"] = ssim7.cpu().numpy()
+
+        psnr8 /= total_count
+        ssim8 /= total_count
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(psnr8, DDPHelper.ReduceOp.AVG)
+            DDPHelper.all_reduce(ssim8, DDPHelper.ReduceOp.AVG)
+        ret["PSNR_L4_Mask_DRR"] = psnr8.cpu().numpy()
+        ret["SSIM_L4_Mask_DRR"] = ssim8.cpu().numpy()
 
         if self.log_bmd_pcc:
-            inference_ai_list = torch.Tensor(inference_ai_list).view(-1).cpu().numpy()
-            gt_bmds = torch.cat(gt_bmds).cpu().numpy()
-            pcc += pearsonr(gt_bmds, inference_ai_list)[0]
+            inference_ai_list_L1 = torch.Tensor(inference_ai_list_L1).view(-1).cpu().numpy()
+            gt_bmds_L1 = torch.Tensor(gt_bmds_L1).view(-1).cpu().numpy()
+            pcc_l1 += pearsonr(gt_bmds_L1, inference_ai_list_L1)[0]
+            icc_l1 += self._ICC(gt_bmds_L1, inference_ai_list_L1)
+
             if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC(AVG)"] = pcc
+                DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
+                DDPHelper.all_reduce(icc_l1, DDPHelper.ReduceOp.AVG)
+
+            ret["L1_CT-aBMD_PCC"] = pcc_l1
+            ret["L1_CT-aBMD_ICC"] = icc_l1
+
+            inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
+            gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
+            pcc_l2 += pearsonr(gt_bmds_L2, inference_ai_list_L2)[0]
+            icc_l2 += self._ICC(gt_bmds_L2, inference_ai_list_L2)
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
+                DDPHelper.all_reduce(icc_l2, DDPHelper.ReduceOp.AVG)
+            ret["L2_CT-aBMD_PCC"] = pcc_l2
+            ret["L2_CT-aBMD_ICC"] = icc_l2
+
+            inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
+            gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
+            pcc_l3 += pearsonr(gt_bmds_L3, inference_ai_list_L3)[0]
+            icc_l3 += self._ICC(gt_bmds_L3, inference_ai_list_L3)
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
+                DDPHelper.all_reduce(icc_l3, DDPHelper.ReduceOp.AVG)
+            ret["L3_CT-aBMD_PCC"] = pcc_l3
+            ret["L3_CT-aBMD_ICC"] = icc_l3
+
+            inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
+            gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
+            pcc_l4 += pearsonr(gt_bmds_L4, inference_ai_list_L4)[0]
+            icc_l4 += self._ICC(gt_bmds_L4, inference_ai_list_L4)
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
+                DDPHelper.all_reduce(icc_l4, DDPHelper.ReduceOp.AVG)
+            ret["L4_CT-aBMD_PCC"] = pcc_l4
+            ret["L4_CT-aBMD_ICC"] = icc_l4
+
+            all_gt_bmds = gt_bmds_L1.tolist() + gt_bmds_L2.tolist() + gt_bmds_L3.tolist() + gt_bmds_L4.tolist()
+            all_inference_ai_list = inference_ai_list_L1.tolist() + inference_ai_list_L2.tolist() + inference_ai_list_L3.tolist() + inference_ai_list_L4.tolist()
+            pcc_all += pearsonr(all_gt_bmds, all_inference_ai_list)[0]
+            icc_all += self._ICC(np.array(all_gt_bmds), np.array(all_inference_ai_list))
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(pcc_all, DDPHelper.ReduceOp.AVG)
+                DDPHelper.all_reduce(icc_all, DDPHelper.ReduceOp.AVG)
+            ret["ALL_CT-aBMD_PCC"] = pcc_all
+            ret["ALL_CT-aBMD_ICC"] = icc_all
+
+
+        if not self.pretrain_stage:
+            fake_dxa_bmd_L1 = torch.Tensor(fake_dxa_bmd_L1).view(-1).cpu().numpy()
+            gt_dxa_bmd_L1 = torch.Tensor(gt_dxa_bmd_L1).view(-1).cpu().numpy()
+            dxa_pcc_l1 += pearsonr(gt_dxa_bmd_L1, fake_dxa_bmd_L1)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l1, DDPHelper.ReduceOp.AVG)
+
+            ret["L1_DXABMD_PCC"] = dxa_pcc_l1
+
+            fake_dxa_bmd_L2 = torch.Tensor(fake_dxa_bmd_L2).view(-1).cpu().numpy()
+            gt_dxa_bmd_L2 = torch.Tensor(gt_dxa_bmd_L2).view(-1).cpu().numpy()
+            dxa_pcc_l2 += pearsonr(gt_dxa_bmd_L2, fake_dxa_bmd_L2)[0]
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l2, DDPHelper.ReduceOp.AVG)
+
+            ret["L2_DXABMD_PCC"] = dxa_pcc_l2
+
+            fake_dxa_bmd_L3 = torch.Tensor(fake_dxa_bmd_L3).view(-1).cpu().numpy()
+            gt_dxa_bmd_L3 = torch.Tensor(gt_dxa_bmd_L3).view(-1).cpu().numpy()
+            dxa_pcc_l3 += pearsonr(gt_dxa_bmd_L3, fake_dxa_bmd_L3)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l3, DDPHelper.ReduceOp.AVG)
+
+            ret["L3_DXABMD_PCC"] = dxa_pcc_l3
+
+            fake_dxa_bmd_L4 = torch.Tensor(fake_dxa_bmd_L4).view(-1).cpu().numpy()
+            gt_dxa_bmd_L4 = torch.Tensor(gt_dxa_bmd_L4).view(-1).cpu().numpy()
+            dxa_pcc_l4 += pearsonr(gt_dxa_bmd_L4, fake_dxa_bmd_L4)[0]
+
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_l4, DDPHelper.ReduceOp.AVG)
+
+            ret["L4_DXABMD_PCC"] = dxa_pcc_l4
+
+            all_gt_dxa_bmd = gt_dxa_bmd_L1.tolist() + gt_dxa_bmd_L2.tolist() + gt_dxa_bmd_L3.tolist() + gt_dxa_bmd_L4.tolist()
+            all_fake_dxa_bmd = fake_dxa_bmd_L1.tolist() + fake_dxa_bmd_L2.tolist() + fake_dxa_bmd_L3.tolist() + fake_dxa_bmd_L4.tolist()
+
+            dxa_pcc_all += pearsonr(all_gt_dxa_bmd, all_fake_dxa_bmd)[0]
+            if DDPHelper.is_initialized():
+                DDPHelper.all_reduce(dxa_pcc_all, DDPHelper.ReduceOp.AVG)
+
+            ret["ALL_DXABMD_PCC"] = dxa_pcc_all
+
         return ret
+
 
     @torch.no_grad()
     def log_visual(self, data):
@@ -284,9 +597,20 @@ class ViTVQBMDModel(TrainingModelInt):
         drrs = data["drr"].to(self.device)
         fake_drrs, _ = self.forward(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
-        ret = {"Xray": xps,
-               "DRR": drrs,
-               "Fake_DRR": fake_drrs}
+
+        ret = {"Xray": xps}
+        for i in [0, 1, 2, 3]:
+            drrs_ = drrs[:, i, :, :].unsqueeze(1)
+            masks = drrs[:, i + 4, :, :].unsqueeze(1)
+            fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
+            fake_masks = fake_drrs[:, i + 4, :, :].unsqueeze(1)
+
+            bone_level = i + 1
+            ret.update({f"L{bone_level}_DRR": drrs_})
+            ret.update({f"L{bone_level}_Mask_DRR": masks})
+            ret.update({f"L{bone_level}_Fake_DRR": fake_drrs_})
+            ret.update({f"L{bone_level}_Fake_Mask_DRR": fake_masks})
+
         for key, val in ret.items():
             for i in range(val.shape[0]):
                 val[i] = ImageHelper.min_max_scale(val[i])
@@ -343,10 +667,48 @@ class ViTVQBMDModel(TrainingModelInt):
         area = mask.sum()
         if area <= 0.:
             if isinstance(image, torch.Tensor):
-                return torch.Tensor(0, dtype=image.dtype, device=image.device)
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
             return 0.
         numerator = (image * mask).sum()
         return numerator / area
+
+    @staticmethod
+    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor, space: np.ndarray | torch.Tensor
+                                         ) -> float | np.ndarray | torch.Tensor:
+        # area = (mask * space).sum()
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = image.sum()
+        return numerator / area
+
+    @staticmethod
+    def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:
+        image_mean = image.sum() / (image > 0.).sum()
+        image[image < 0.2 * image_mean] = 0.
+        if isinstance(image, torch.Tensor):
+            mask = torch.tensor((image > 0.), dtype=image.dtype)
+        else:
+            mask = (image > 0.).astype(image.dtype)
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = image.sum()
+        return numerator / area
+
+    @staticmethod
+    def _ICC(pred_values: np.ndarray, y_values: np.ndarray) -> float:
+        assert isinstance(pred_values, np.ndarray) and isinstance(y_values, np.ndarray)
+        assert pred_values.ndim == 1 and y_values.ndim == 1
+        n = len(pred_values)
+        assert n == len(y_values)
+        mean = np.mean(pred_values) / 2. + np.mean(y_values) / 2.
+        s2 = (np.sum((pred_values - mean) ** 2) + np.sum((y_values - mean) ** 2)) / (2. * n)
+        return np.sum((pred_values - mean) * (y_values - mean)) / (n * s2)
 
 
 # Not Completed

@@ -539,7 +539,6 @@ class BMDGANModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        print(xps.shape)
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 

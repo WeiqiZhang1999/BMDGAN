@@ -623,7 +623,7 @@ class ViTBMDModel(TrainingModelInt):
         if resume:
             assert strict == True
 
-        for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
+        for signature in ["encoder", "decoder", "netD"]:
         # for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
@@ -636,7 +636,7 @@ class ViTBMDModel(TrainingModelInt):
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["encoder", "quantizer", "decoder", "pre_quant", "post_quant", "netD"]:
+        for signature in ["encoder", "decoder", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
             if signature == "quantizer":
@@ -647,11 +647,11 @@ class ViTBMDModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["encoder", "decoder", "pre_quant", "post_quant", "netD"]:
+            for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["encoder", "decoder", "pre_quant", "post_quant", "netD"]:
+            for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
 

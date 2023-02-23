@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2/6/2023 4:16 PM
 # @Author  : ZHANG WEIQI
-# @File    : ViTVQBMDModel.py
+# @File    : ViTBMDModel.py
 # @Software: PyCharm
 
 import itertools
@@ -36,7 +36,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class ViTVQBMDModel(TrainingModelInt):
+class ViTBMDModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
@@ -62,23 +62,23 @@ class ViTVQBMDModel(TrainingModelInt):
         # Prepare models
         self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config).to(self.device)
         self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config).to(self.device)
-        self.quantizer = VectorQuantizer(**quantizer_config).to(self.device)
-        self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim).to(self.device)
-        self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim).to(self.device)
+        # self.quantizer = VectorQuantizer(**quantizer_config).to(self.device)
+        # self.pre_quant = nn.Linear(encoder_config.dim, quantizer_config.embed_dim).to(self.device)
+        # self.post_quant = nn.Linear(quantizer_config.embed_dim, decoder_config.dim).to(self.device)
         self.optimizer_config = optimizer_config
 
         self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
 
         if self.rank == 0:
-            self.pre_quant.apply(weights_init)
-            self.post_quant.apply(weights_init)
+            # self.pre_quant.apply(weights_init)
+            # self.post_quant.apply(weights_init)
             self.netD.apply(weights_init)
 
         # Wrap DDP
         self.encoder = DDPHelper.shell_ddp(self.encoder)
         self.decoder = DDPHelper.shell_ddp(self.decoder)
-        self.pre_quant = DDPHelper.shell_ddp(self.pre_quant)
-        self.post_quant = DDPHelper.shell_ddp(self.post_quant)
+        # self.pre_quant = DDPHelper.shell_ddp(self.pre_quant)
+        # self.post_quant = DDPHelper.shell_ddp(self.post_quant)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
@@ -104,42 +104,42 @@ class ViTVQBMDModel(TrainingModelInt):
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
             self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 
-    def forward(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-        quant, diff = self.encode(x)
-        dec = self.decode(quant)
-
-        return dec, diff
-
-    def encode(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
-        h = self.encoder(x)
-        h = self.pre_quant(h)
-        quant, emb_loss, _ = self.quantizer(h)
-
-        return quant, emb_loss
-
-    def decode(self, quant: torch.FloatTensor) -> torch.FloatTensor:
-        quant = self.post_quant(quant)
-        dec = self.decoder(quant)
-
-        return dec
-
-    def encode_codes(self, x: torch.FloatTensor) -> torch.LongTensor:
-        h = self.encoder(x)
-        h = self.pre_quant(h)
-        _, _, codes = self.quantizer(h)
-
-        return codes
-
-    def decode_codes(self, code: torch.LongTensor) -> torch.FloatTensor:
-        quant = self.quantizer.embedding(code)
-        quant = self.quantizer.norm(quant)
-
-        if self.quantizer.use_residual:
-            quant = quant.sum(-2)
-
-        dec = self.decode(quant)
-
-        return dec
+    # def forward(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    #     quant, diff = self.encode(x)
+    #     dec = self.decode(quant)
+    #
+    #     return dec, diff
+    #
+    # def encode(self, x: torch.FloatTensor) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    #     h = self.encoder(x)
+    #     h = self.pre_quant(h)
+    #     quant, emb_loss, _ = self.quantizer(h)
+    #
+    #     return quant, emb_loss
+    #
+    # def decode(self, quant: torch.FloatTensor) -> torch.FloatTensor:
+    #     quant = self.post_quant(quant)
+    #     dec = self.decoder(quant)
+    #
+    #     return dec
+    #
+    # def encode_codes(self, x: torch.FloatTensor) -> torch.LongTensor:
+    #     h = self.encoder(x)
+    #     h = self.pre_quant(h)
+    #     _, _, codes = self.quantizer(h)
+    #
+    #     return codes
+    #
+    # def decode_codes(self, code: torch.LongTensor) -> torch.FloatTensor:
+    #     quant = self.quantizer.embedding(code)
+    #     quant = self.quantizer.norm(quant)
+    #
+    #     if self.quantizer.use_residual:
+    #         quant = quant.sum(-2)
+    #
+    #     dec = self.decode(quant)
+    #
+    #     return dec
 
 
     def config_optimizer(self):
@@ -147,9 +147,9 @@ class ViTVQBMDModel(TrainingModelInt):
         self.optimizer_config.pop("class")
 
         self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        self.pre_quant.module.parameters(),
-                                                        self.quantizer.parameters(),
-                                                        self.post_quant.module.parameters(),
+                                                        # self.pre_quant.module.parameters(),
+                                                        # self.quantizer.parameters(),
+                                                        # self.post_quant.module.parameters(),
                                                         self.decoder.module.parameters()),
                                         **self.optimizer_config)
 
@@ -165,8 +165,8 @@ class ViTVQBMDModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        fake_drr, _ = self.forward(xp)
-
+        # fake_drr, _ = self.forward(xp)
+        fake_drr = self.decoder(self.encoder)
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
@@ -174,13 +174,13 @@ class ViTVQBMDModel(TrainingModelInt):
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
 
-        content_fake, vq_fake = self.encode(xp)
-        content_gt, vq_gt = self.encode(drr)
-        # vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
-        #           torch.abs(content_gt - content_fake).mean() * 0.5
-        vq_loss = torch.abs(vq_gt - vq_fake).mean()
-        log["G_VQ"] = vq_loss.detach()
-        G_loss = G_loss + vq_loss * self.lambda_VQ
+        # content_fake, vq_fake = self.encode(xp)
+        # content_gt, vq_gt = self.encode(drr)
+        # # vq_loss = torch.abs(vq_gt - vq_fake).mean() * 0.5 +\
+        # #           torch.abs(content_gt - content_fake).mean() * 0.5
+        # vq_loss = torch.abs(vq_gt - vq_fake).mean()
+        # log["G_VQ"] = vq_loss.detach()
+        # G_loss = G_loss + vq_loss * self.lambda_VQ
 
         if self.lambda_AE > 0.:
             ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
@@ -305,7 +305,8 @@ class ViTVQBMDModel(TrainingModelInt):
             if not self.pretrain_stage:
                 dxa_bmds = data["DXABMD"].to(self.device)
 
-            fake_drrs, _ = self.forward(xps)
+            # fake_drrs, _ = self.forward(xps)
+            fake_drrs = self.decoder(self.encoder)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -595,7 +596,8 @@ class ViTVQBMDModel(TrainingModelInt):
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        fake_drrs, _ = self.forward(xps)
+        # fake_drrs, _ = self.forward(xps)
+        fake_drrs = self.decoder(self.encoder)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}

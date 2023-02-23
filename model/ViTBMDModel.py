@@ -41,7 +41,7 @@ class ViTBMDModel(TrainingModelInt):
     def __init__(self,
                  optimizer_config,
                  encoder_config,
-                 quantizer_config,
+                 # quantizer_config,
                  decoder_config,
                  image_size: int,
                  patch_size: int,

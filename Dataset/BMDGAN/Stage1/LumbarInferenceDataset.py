@@ -64,9 +64,9 @@ class LumbarInferenceDataset(Dataset):
         if self.debug:
             training_case_names = training_case_names[:100]
         for case_name in training_case_names:
-            xp_case_name = f"{case_name}_trunkDRR_{self.view}.mhd"
-            drr_case_name = f"{case_name}_trunkDRR_Decomposed_{self.view}.mhd"
-            mask_case_name = f"{case_name}_trunkDRR_Decomposed_binary_mask_{self.view}.mhd"
+            xp_case_name = f"{case_name}_lumbarROI_DRR_{self.view}.mhd"
+            drr_case_name = f"{case_name}_lumbarROI_DecomposedDRR_{self.view}.mhd"
+            mask_case_name = f"{case_name}_lumbarROI_DecomposedBinaryMaskDRR_{self.view}.mhd"
 
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
             case_drr_dir = OSHelper.path_join(self.drr_root, drr_case_name)

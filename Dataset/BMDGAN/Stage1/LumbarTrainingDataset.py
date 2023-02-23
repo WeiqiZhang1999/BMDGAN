@@ -25,11 +25,9 @@ class LumbarTrainingDataset(Dataset):
                  aug_conf: str,
                  n_worker,
                  view='AP',
-                 center_crop=False,
                  debug=False,
                  preload=True,
                  verbose=False):
-        self.center_crop = center_crop
         self.split_fold = split_fold
         self.image_size = image_size
         self.load_size = load_size
@@ -185,7 +183,5 @@ class LumbarTrainingDataset(Dataset):
         img = ImageHelper.standardize(img, 0.5, 0.5)
         img = np.clip(img, -1., 1.)
         img = img.astype(np.float32)
-        if self.center_crop:
-            img = ImageHelper.center_cropping(img, 1.0)
         img = np.transpose(img, (2, 0, 1))
         return img

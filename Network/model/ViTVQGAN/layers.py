@@ -178,7 +178,7 @@ class ViTEncoder(nn.Module):
         self.patch_dim = channels * patch_height * patch_width
 
         self.to_patch_embedding = nn.Sequential(
-            nn.Conv2d(channels, dim, kernel_size=patch_size, stride=patch_size, adding_mode="reflect"),
+            nn.Conv2d(channels, dim, kernel_size=patch_size, stride=patch_size, padding_mode="reflect"),
             Rearrange('b c h w -> b (h w) c'),
         )
         self.en_pos_embedding = nn.Parameter(torch.from_numpy(en_pos_embedding).float().unsqueeze(0), requires_grad=False)

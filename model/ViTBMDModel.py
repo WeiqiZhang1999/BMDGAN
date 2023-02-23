@@ -107,7 +107,7 @@ class ViTBMDModel(TrainingModelInt):
 
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
-        self.netD_optimizer = optimizer(self.netD.module.parameters(),
+        self.netD_optimizer = optimizer(self.netD.parameters(),
                                         **self.optimizer_config)
         self.netD_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer, self.netD_optimizer]

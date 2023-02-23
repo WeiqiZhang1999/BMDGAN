@@ -45,14 +45,14 @@ class LumbarInferenceDataset(Dataset):
         self.debug = debug
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"20k_trunkDRR_fold_1.json"), 'r') as f:
+        with open(OSHelper.path_join(self.data_root, r"10k_ROIDRR_fold_1.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["test"]
 
         assert self.view == 'AP' or self.view == 'LAT', self.view
         if self.view == 'AP':
-            self.xp_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_offset900_AP")
-            self.drr_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_AP_normal_new")
-            self.mask_root = OSHelper.path_join(self.data_root, "20230130_trunkDRR_decomposed_Mask_AP_normal")
+            self.xp_root = OSHelper.path_join(self.data_root, "JMID_Xp_AP")
+            self.drr_root = OSHelper.path_join(self.data_root, "JMID_DRR_AP_normal")
+            self.mask_root = OSHelper.path_join(self.data_root, "JMID_MDRR_AP_normal")
         else:
             raise NotImplementedError
             # self.xp_root = OSHelper.path_join(self.data_root, "20230130_JMID_LumbarDRR_LAT")

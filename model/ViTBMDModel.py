@@ -69,9 +69,9 @@ class ViTBMDModel(TrainingModelInt):
             self.netD.apply(weights_init)
 
         # Wrap DDP
-        # self.encoder = DDPHelper.shell_ddp(self.encoder)
-        # self.decoder = DDPHelper.shell_ddp(self.decoder)
-        # self.netD = DDPHelper.shell_ddp(self.netD)
+        self.encoder = DDPHelper.shell_ddp(self.encoder)
+        self.decoder = DDPHelper.shell_ddp(self.decoder)
+        self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
@@ -101,13 +101,13 @@ class ViTBMDModel(TrainingModelInt):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.encoder.parameters(),
-                                                        self.decoder.parameters()),
+        self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
+                                                        self.decoder.module.parameters()),
                                         **self.optimizer_config)
 
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
-        self.netD_optimizer = optimizer(self.netD.parameters(),
+        self.netD_optimizer = optimizer(self.netD.module.parameters(),
                                         **self.optimizer_config)
         self.netD_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
         return [self.netG_optimizer, self.netD_optimizer]
@@ -118,11 +118,11 @@ class ViTBMDModel(TrainingModelInt):
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
         # fake_drr, _ = self.forward(xp)
-        fake_drr = self.decoder(self.encoder)
+        fake_drr = self.decoder(self.encoder(xp))
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
-        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.num_D
+        g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss.detach()
         G_loss = G_loss + g_loss * self.lambda_GAN
 
@@ -133,8 +133,8 @@ class ViTBMDModel(TrainingModelInt):
 
         if self.lambda_FM > 0.:
             fm_loss = calculate_FM_loss(D_pred_fake, D_pred_real,
-                                        self.netD.n_layer,
-                                        self.netD.num_D)
+                                        self.netD.module.n_layer,
+                                        self.netD.module.num_D)
             log["G_FM"] = fm_loss.detach()
             G_loss = G_loss + fm_loss * self.lambda_FM
 
@@ -153,8 +153,8 @@ class ViTBMDModel(TrainingModelInt):
 
         D_loss = 0.
         D_pred_fake_detach = self.netD(torch.cat((xp, fake_drr.detach()), dim=1))
-        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.num_D
-        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.num_D
+        d_loss_fake = self.crit_GAN.crit_fake(D_pred_fake_detach) / self.netD.module.num_D
+        d_loss_real = self.crit_GAN.crit_real(D_pred_real) / self.netD.module.num_D
         log["D_real"] = d_loss_real.detach()
         log["D_fake"] = d_loss_fake.detach()
         D_loss = D_loss + d_loss_real * 0.5 + d_loss_fake * 0.5
@@ -164,13 +164,13 @@ class ViTBMDModel(TrainingModelInt):
     def train_batch(self, data, batch_id, epoch):
         g_loss, d_loss, log = self.__compute_loss(data)
 
-        TorchHelper.set_requires_grad(self.netD, False)
+        TorchHelper.set_requires_grad(self.netD.module, False)
         self.netG_optimizer.zero_grad()
         self.netG_grad_scaler.scale(g_loss).backward()
         self.netG_grad_scaler.step(self.netG_optimizer)
         self.netG_grad_scaler.update()
 
-        TorchHelper.set_requires_grad(self.netD, True)
+        TorchHelper.set_requires_grad(self.netD.module, True)
         self.netD_optimizer.zero_grad()
         self.netD_grad_scaler.scale(d_loss).backward()
         self.netD_grad_scaler.step(self.netD_optimizer)
@@ -250,7 +250,7 @@ class ViTBMDModel(TrainingModelInt):
                 dxa_bmds = data["DXABMD"].to(self.device)
 
             # fake_drrs, _ = self.forward(xps)
-            fake_drrs = self.decoder(self.encoder)
+            fake_drrs = self.decoder(self.encoder(xps))
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -541,7 +541,7 @@ class ViTBMDModel(TrainingModelInt):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
         # fake_drrs, _ = self.forward(xps)
-        fake_drrs = self.decoder(self.encoder)
+        fake_drrs = self.decoder(self.encoder(xps))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}
@@ -571,7 +571,10 @@ class ViTBMDModel(TrainingModelInt):
         # for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net, load_path, strict=strict)
+            if signature == "quantizer":
+                TorchHelper.load_network_by_path(net, load_path, strict=strict)
+            else:
+                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
             # print(f"Model {signature} loaded from {load_path}")
 
@@ -583,18 +586,18 @@ class ViTBMDModel(TrainingModelInt):
             if signature == "quantizer":
                 torch.save(net.state_dict(), save_path)
             else:
-                torch.save(net.state_dict(), save_path)
+                torch.save(net.module.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):
         if train:
             for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
-                net.train()
+                net.module.train()
         else:
             for signature in ["encoder", "decoder", "netD"]:
                 net = getattr(self, signature)
-                net.eval()
+                net.module.eval()
 
 
     def on_train_batch_end(self, *args, **kwargs):

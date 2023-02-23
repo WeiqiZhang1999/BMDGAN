@@ -50,6 +50,7 @@ class ViTVQBMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  lambda_VQ=1.,
+                 pretrain_stage=False,
                  log_pcc=False,
                  ):
 

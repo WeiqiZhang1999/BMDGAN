@@ -78,12 +78,12 @@ class CycleResnetModel(TrainingModelInt):
 
         if self.pretrain_stage:
             self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 105194.375
+            self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
+            self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
         else:
             self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 36.74824
+            self.MAX_VAL_DXA_DRR_2k = 48319.90625
             self.MIN_VAL_DXA_MASK_DRR_2k = 0.
             self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
 

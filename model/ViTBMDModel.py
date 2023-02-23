@@ -147,9 +147,6 @@ class ViTBMDModel(TrainingModelInt):
         self.optimizer_config.pop("class")
 
         self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        # self.pre_quant.module.parameters(),
-                                                        # self.quantizer.parameters(),
-                                                        # self.post_quant.module.parameters(),
                                                         self.decoder.module.parameters()),
                                         **self.optimizer_config)
 

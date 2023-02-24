@@ -45,6 +45,7 @@ class BMDGANModel(TrainingModelInt):
                  lambda_GC=1.,
                  pretrain_stage=False,
                  log_pcc=False,
+                 view='AP',
                  ):
 
         self.rank = DDPHelper.rank()
@@ -88,16 +89,29 @@ class BMDGANModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        if self.pretrain_stage:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
+        assert view == 'AP' or view == 'LAT', view
+        if view == 'AP':
+            if self.pretrain_stage:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
+            else:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 48319.90625
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
         else:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 48319.90625
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
+            if self.pretrain_stage:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 90598.359375
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 155.0
+            else:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 0.
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 0.
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

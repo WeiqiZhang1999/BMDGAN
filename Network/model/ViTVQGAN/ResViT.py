@@ -276,7 +276,7 @@ class ART_block(nn.Module):
             # Patch embedings
             self.embeddings = Embeddings(img_size, grid, hidden_size, dropout_rate, in_channels=in_channels, old=old)
             # Upsampling block
-            model = [nn.ConvTranspose2d(self.config.hidden_size, ngf * 8,
+            model = [nn.ConvTranspose2d(hidden_size, ngf * 8,
                                         kernel_size=3, stride=2,
                                         padding=1, output_padding=1,
                                         bias=use_bias),

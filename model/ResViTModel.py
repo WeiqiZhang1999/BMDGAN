@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Time    : 2/18/2023 6:55 PM
-# @Author  : ZHANG WEIQI
-# @File    : CycleResnetModel.py
-# @Software: PyCharm
-
 import itertools
 
 from Utils.DDPHelper import DDPHelper

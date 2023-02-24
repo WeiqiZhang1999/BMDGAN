@@ -49,14 +49,11 @@ class LumbarInferenceDataset(Dataset):
             training_case_names = json.load(f)[str(split_fold)]["test"]
 
         assert self.view == 'AP' or self.view == 'LAT', self.view
-        if self.view == 'AP':
-            self.xp_root = OSHelper.path_join(self.data_root, f"JMID_Xp_{self.view}")
-            self.drr_root = OSHelper.path_join(self.data_root, f"JMID_DRR_{self.view}_normal")
-            self.mask_root = OSHelper.path_join(self.data_root, f"JMID_MDRR_{self.view}_normal")
-        else:
-            raise NotImplementedError
-            # self.xp_root = OSHelper.path_join(self.data_root, "20230130_JMID_LumbarDRR_LAT")
-            # self.drr_root = OSHelper.path_join(self.data_root, "20230130_JMID_Lumbar_DecomposedDRR_LAT_Ensembles")
+
+        self.xp_root = OSHelper.path_join(self.data_root, f"JMID_Xp_{self.view}")
+        self.drr_root = OSHelper.path_join(self.data_root, f"JMID_DRR_{self.view}_normal")
+        self.mask_root = OSHelper.path_join(self.data_root, f"JMID_MDRR_{self.view}_normal")
+
 
         self.xp_pool = []
         self.drr_pool = []

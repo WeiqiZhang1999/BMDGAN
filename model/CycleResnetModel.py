@@ -94,7 +94,7 @@ class CycleResnetModel(TrainingModelInt):
                 self.MIN_VAL_DXA_DRR_2k = 0.
                 self.MAX_VAL_DXA_DRR_2k = 90598.359375
                 self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-                self.MAX_VAL_DXA_MASK_DRR_2k = 155.0
+                self.MAX_VAL_DXA_MASK_DRR_2k = 115.0
             else:
                 self.MIN_VAL_DXA_DRR_2k = 0.
                 self.MAX_VAL_DXA_DRR_2k = 0.

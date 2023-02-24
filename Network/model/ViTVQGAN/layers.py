@@ -244,30 +244,119 @@ class ViTDecoder(nn.Module):
         return self.to_pixel[-1].weight
 
 
-class BMDFormer(nn.Module):
-    def __init__(self,
-                 image_size,
-                 patch_size,
-                 inp_channels=1,
-                 out_channels=2,
-                 dim=48,
-                 num_blocks=[4, 6, 6, 8],
-                 ):
+########Generator############
+class ResViT(nn.Module):
+    def __init__(self, config, input_dim, img_size=224, output_dim=3, vis=False):
+        super(ResViT, self).__init__()
+        self.transformer_encoder = Encoder(config, vis)
+        self.config = config
+        output_nc = output_dim
+        ngf = 64
+        use_bias = False
+        norm_layer = nn.BatchNorm2d
+        padding_type = 'reflect'
+        mult = 4
 
-        super(BMDFormer, self).__init__()
+        ############################################################################################
+        # Layer1-Encoder1
+        model = [nn.ReflectionPad2d(3),
+                 nn.Conv2d(input_dim, ngf, kernel_size=7, padding=0,
+                           bias=use_bias),
+                 norm_layer(ngf),
+                 nn.ReLU(True)]
+        setattr(self, 'encoder_1', nn.Sequential(*model))
+        ############################################################################################
+        # Layer2-Encoder2
+        n_downsampling = 2
+        model = []
+        i = 0
+        mult = 2 ** i
+        model = [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3,
+                           stride=2, padding=1, bias=use_bias),
+                 norm_layer(ngf * mult * 2),
+                 nn.ReLU(True)]
+        setattr(self, 'encoder_2', nn.Sequential(*model))
+        ############################################################################################
+        # Layer3-Encoder3
+        model = []
+        i = 1
+        mult = 2 ** i
+        model = [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3,
+                           stride=2, padding=1, bias=use_bias),
+                 norm_layer(ngf * mult * 2),
+                 nn.ReLU(True)]
+        setattr(self, 'encoder_3', nn.Sequential(*model))
+        ####################################ART Blocks##############################################
+        mult = 4
+        self.art_1 = ART_block(self.config, input_dim, img_size, transformer=self.transformer_encoder)
+        self.art_2 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_3 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_4 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_5 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_6 = ART_block(self.config, input_dim, img_size, transformer=self.transformer_encoder)
+        self.art_7 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_8 = ART_block(self.config, input_dim, img_size, transformer=None)
+        self.art_9 = ART_block(self.config, input_dim, img_size, transformer=None)
+        ############################################################################################
+        # Layer13-Decoder1
+        n_downsampling = 2
+        i = 0
+        mult = 2 ** (n_downsampling - i)
+        model = []
+        model = [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                    kernel_size=3, stride=2,
+                                    padding=1, output_padding=1,
+                                    bias=use_bias),
+                 norm_layer(int(ngf * mult / 2)),
+                 nn.ReLU(True)]
+        setattr(self, 'decoder_1', nn.Sequential(*model))
+        ############################################################################################
+        # Layer14-Decoder2
+        i = 1
+        mult = 2 ** (n_downsampling - i)
+        model = []
+        model = [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                    kernel_size=3, stride=2,
+                                    padding=1, output_padding=1,
+                                    bias=use_bias),
+                 norm_layer(int(ngf * mult / 2)),
+                 nn.ReLU(True)]
+        setattr(self, 'decoder_2', nn.Sequential(*model))
+        ############################################################################################
+        # Layer15-Decoder3
+        model = []
+        model = [nn.ReflectionPad2d(3)]
+        model += [nn.Conv2d(ngf, output_dim, kernel_size=7, padding=0)]
+        model += [nn.Tanh()]
+        setattr(self, 'decoder_3', nn.Sequential(*model))
 
-        image_height, image_width = image_size if isinstance(image_size, tuple) \
-                                    else (image_size, image_size // 2)
-        patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
-                                    else (patch_size, patch_size)
+    ############################################################################################
 
-        assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
-        en_pos_embedding = get_2d_sincos_pos_embed(dim, (image_height // patch_height, image_width // patch_width))
-        self.to_patch_embedding = nn.Sequential(
-            nn.Conv2d(inp_channels, dim, kernel_size=patch_size, stride=patch_size),
-            Rearrange('b c h w -> b (h w) c'),
-        )
-        self.en_pos_embedding = nn.Parameter(torch.from_numpy(en_pos_embedding).float().unsqueeze(0), requires_grad=False)
+    def forward(self, x):
+        # Pass input through cnn encoder of ResViT
+        x = self.encoder_1(x)
+        x = self.encoder_2(x)
+        x = self.encoder_3(x)
+
+        # Information Bottleneck
+        x = self.art_1(x)
+        x = self.art_2(x)
+        x = self.art_3(x)
+        x = self.art_4(x)
+        x = self.art_5(x)
+        x = self.art_6(x)
+        x = self.art_7(x)
+        x = self.art_8(x)
+        x = self.art_9(x)
+
+        # decoder
+        x = self.decoder_1(x)
+        x = self.decoder_2(x)
+        x = self.decoder_3(x)
+        return x
+
+
+
 
 
 

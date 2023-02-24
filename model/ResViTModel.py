@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2/6/2023 4:16 PM
+# @Time    : 2/18/2023 6:55 PM
 # @Author  : ZHANG WEIQI
-# @File    : ViTBMDModel.py
+# @File    : CycleResnetModel.py
 # @Software: PyCharm
 
 import itertools
+
 from Utils.DDPHelper import DDPHelper
-from Utils.ImageHelper import ImageHelper
 import torch
 import logging
 from typing import AnyStr
@@ -17,15 +17,12 @@ import numpy as np
 from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
-from typing import List, Tuple, Dict, Any, Optional
-from Network.model.ViTVQGAN.layers import ViTEncoder as Encoder, ViTDecoder as Decoder
-from Network.model.ViTVQGAN.Quantizer import VectorQuantizer, GumbelQuantizer
-from Network.model.VQGAN.VectorQuantizer import EMAVectorQuantizer
-from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
-from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
+
+from Network.model.ViTVQGAN.ResViT import ResViT
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
+from Utils.ImageHelper import ImageHelper
 from torchmetrics.functional import structural_similarity_index_measure
 from torchmetrics.functional import peak_signal_noise_ratio
 from scipy.stats import pearsonr
@@ -36,21 +33,18 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class ViTBMDModel(TrainingModelInt):
+class ResViTModel(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,
-                 encoder_config,
-                 decoder_config,
-                 image_size: int,
-                 patch_size: int,
+                 netG_config,
                  lambda_GAN=1.,
                  lambda_AE=100.,
                  lambda_FM=10.,
                  lambda_GC=1.,
-                 lambda_VQ=1.,
                  pretrain_stage=False,
                  log_pcc=False,
+                 view='AP'
                  ):
 
         self.rank = DDPHelper.rank()
@@ -59,52 +53,61 @@ class ViTBMDModel(TrainingModelInt):
         self.pretrain_stage = pretrain_stage
 
         # Prepare models
-        self.encoder = Encoder(image_size=image_size, patch_size=patch_size, **encoder_config).to(self.device)
-        self.decoder = Decoder(image_size=image_size, patch_size=patch_size, **decoder_config).to(self.device)
+        self.netG = ResViT(**netG_config).to(self.device)
         self.optimizer_config = optimizer_config
-
         self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
+        # input_nc(9) = 1 (Xp) + 8 (L1 - L4 DRR/Mask DRR)
 
         if self.rank == 0:
+            self.netG.apply(weights_init)
             self.netD.apply(weights_init)
 
         # Wrap DDP
-        self.encoder = DDPHelper.shell_ddp(self.encoder)
-        self.decoder = DDPHelper.shell_ddp(self.decoder)
+        self.netG = DDPHelper.shell_ddp(self.netG)
         self.netD = DDPHelper.shell_ddp(self.netD)
 
         self.lambda_GAN = lambda_GAN
         self.lambda_AE = lambda_AE
         self.lambda_FM = lambda_FM
         self.lambda_GC = lambda_GC
-        self.lambda_VQ = lambda_VQ
-        assert self.lambda_GAN > 0. and self.lambda_VQ > 0.
+        assert self.lambda_GAN > 0.
         self.crit_GAN = LSGANLoss().to(self.device)
         if self.lambda_GC > 0.:
             self.crit_GC = GradientCorrelationLoss2D(grad_method="sobel").to(self.device)
 
         self.log_bmd_pcc = log_pcc
 
-        if self.pretrain_stage:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
+        assert view == 'AP' or view == 'LAT', view
+        if view == 'AP':
+            if self.pretrain_stage:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 73053.65012454987
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 96.48443698883057
+            else:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 48319.90625
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
         else:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 48319.90625
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
+            if self.pretrain_stage:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 90598.359375
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 115.0
+            else:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 0.
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 0.
 
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
         self.optimizer_config.pop("class")
 
-        self.netG_optimizer = optimizer(itertools.chain(self.encoder.module.parameters(),
-                                                        self.decoder.module.parameters()),
+        self.netG_optimizer = optimizer(self.netG.module.parameters(),
                                         **self.optimizer_config)
-
         self.netG_grad_scaler = torch.cuda.amp.GradScaler(enabled=True)
 
         self.netD_optimizer = optimizer(self.netD.module.parameters(),
@@ -117,14 +120,14 @@ class ViTBMDModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
-        # fake_drr, _ = self.forward(xp)
-        fake_drr = self.decoder(self.encoder(xp))
+        fake_drr = self.netG(xp)
+
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))
         D_pred_real = self.netD(torch.cat((xp, drr), dim=1))
 
         g_loss = self.crit_GAN.crit_real(D_pred_fake) / self.netD.module.num_D
         log["G_GAN"] = g_loss.detach()
-        G_loss = G_loss + g_loss * self.lambda_GAN
+        G_loss += g_loss * self.lambda_GAN
 
         if self.lambda_AE > 0.:
             ae_loss = torch.abs(drr.contiguous() - fake_drr.contiguous()).mean()
@@ -136,7 +139,7 @@ class ViTBMDModel(TrainingModelInt):
                                         self.netD.module.n_layer,
                                         self.netD.module.num_D)
             log["G_FM"] = fm_loss.detach()
-            G_loss = G_loss + fm_loss * self.lambda_FM
+            G_loss += fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0.:
             gc_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
@@ -177,7 +180,6 @@ class ViTBMDModel(TrainingModelInt):
         self.netD_grad_scaler.update()
 
         return log
-
 
     @torch.no_grad()
     def eval_epoch(self, dataloader, desc):
@@ -249,8 +251,7 @@ class ViTBMDModel(TrainingModelInt):
             if not self.pretrain_stage:
                 dxa_bmds = data["DXABMD"].to(self.device)
 
-            # fake_drrs, _ = self.forward(xps)
-            fake_drrs = self.decoder(self.encoder(xps))
+            fake_drrs = fake_drr = self.netG(xps)
 
             drrs_ = ImageHelper.denormal(drrs)
             fake_drrs_ = ImageHelper.denormal(fake_drrs)
@@ -535,13 +536,11 @@ class ViTBMDModel(TrainingModelInt):
 
         return ret
 
-
     @torch.no_grad()
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
         drrs = data["drr"].to(self.device)
-        # fake_drrs, _ = self.forward(xps)
-        fake_drrs = self.decoder(self.encoder(xps))
+        fake_drrs = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}
@@ -564,41 +563,32 @@ class ViTBMDModel(TrainingModelInt):
         return ret
 
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
-        if resume:
-            assert strict == True
-
-        for signature in ["encoder", "decoder", "netD"]:
-        # for signature in ["netG", "netD"]:
+        # if resume:
+        #     assert strict == True
+        for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            if signature == "quantizer":
-                TorchHelper.load_network_by_path(net, load_path, strict=strict)
-            else:
-                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
             logging.info(f"Model {signature} loaded from {load_path}")
-            # print(f"Model {signature} loaded from {load_path}")
+
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
         OSHelper.mkdirs(save_dir)
-        for signature in ["encoder", "decoder", "netD"]:
+        for signature in ["netG", "netD"]:
             net = getattr(self, signature)
             save_path = str(OSHelper.path_join(save_dir, f"{prefix}_{signature}.pt"))
-            if signature == "quantizer":
-                torch.save(net.state_dict(), save_path)
-            else:
-                torch.save(net.module.state_dict(), save_path)
+            torch.save(net.module.state_dict(), save_path)
             logging.info(f"Save model {signature} to {save_path}")
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["encoder", "decoder", "netD"]:
+            for signature in ["netG", "netD"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["encoder", "decoder", "netD"]:
+            for signature in ["netG", "netD"]:
                 net = getattr(self, signature)
                 net.module.eval()
-
 
     def on_train_batch_end(self, *args, **kwargs):
         pass
@@ -657,58 +647,19 @@ class ViTBMDModel(TrainingModelInt):
         return np.sum((pred_values - mean) * (y_values - mean)) / (n * s2)
 
 
-# Not Completed
-class VQBMDModelInference(InferenceModelInt):
+class RestomerModelInference(InferenceModelInt):
 
     def __init__(self,
-                 netG_enc_config,
-                 netG_up_config,
-                 emb_dim=512,
-                 num_embeddings=1024,
-                 beta=0.25,
-                 ):
+                 netG_config):
+
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
 
-        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-        # self.clip_grad = clip_grad
-        # self.clip_max_norm = clip_max_norm
-        # self.clip_norm_type = clip_norm_type
-        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                     output_nc=(64 * (2 ** 2)),
-                                                     norm_type="group",
-                                                     padding_type="reflect").to(self.device)
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-
-        self.quant_conv = nn.Conv2d(64 * (2 ** 2), emb_dim, 1)
-        self.encoder = nn.Sequential(self.netG_enc, self.netG_fus, self.quant_conv)
-        self.quantize = EMAVectorQuantizer(
-            emb_dim,
-            num_embeddings,
-            beta=beta
-        )
-        self.post_quant_conv = nn.Conv2d(emb_dim, 64 * (2 ** 2), 1)
-        self.decoder = nn.Sequential(self.netG_up, self.post_quant_conv)
-
-    def encode(self, x):
-        h = self.encoder(x)
-        quant, emb_loss, info = self.quantize(h)
-        return quant, emb_loss, info
-
-    def decode(self, quant):
-        dec = self.decoder(quant)
-        return dec
-
-    def forward(self, x):
-        quant, diff, _, = self.encode(x)
-        dec = self.decode(quant)
-        return dec, diff
+        self.netG = ResViT(**netG_config).to(self.device)
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
-        for signature in ["encoder", "quantize", "decoder"]:
+        for signature in ["netG"]:
             net = getattr(self, signature)
             load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
             TorchHelper.load_network_by_path(net, load_path, strict=True)
@@ -727,20 +678,18 @@ class VQBMDModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            slice_ids = data["slice_id"]
-            fake_drrs_cuda, _ = self.forward(xps)
-            fake_drrs = fake_drrs_cuda.cpu().numpy()
+            fake_drrs = self.netG(xps).cpu().numpy()
 
             B = xps.shape[0]
+
             for i in range(B):
-                fake_drr = fake_drrs[i]  # (1, H, W)
+                fake_drr_with_mask = fake_drrs[i]  # (8, H, W)
                 case_name = case_names[i]
-                slice_id = slice_ids[i]
                 space = spaces[i]
-                save_dir = OSHelper.path_join(output_dir, "fake_drr", case_name)
+                save_dir = OSHelper.path_join(output_dir, "fake_drr")
                 OSHelper.mkdirs(save_dir)
-                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{slice_id}.mhd"),
-                                      fake_drr,
+                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
+                                      fake_drr_with_mask,
                                       space,
                                       compress=True)
 

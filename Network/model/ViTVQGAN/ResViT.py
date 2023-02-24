@@ -151,6 +151,7 @@ class Embeddings(nn.Module):
         x = self.patch_embeddings(x)
         x = x.flatten(2)
         x = x.transpose(-1, -2)
+        print(x.shape, self.positional_encoding.shape)
         embeddings = x + self.positional_encoding
         embeddings = self.dropout(embeddings)
         return embeddings

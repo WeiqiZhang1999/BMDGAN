@@ -13,6 +13,7 @@ from __future__ import print_function
 import copy
 import logging
 import math
+from einops import rearrange
 
 from os.path import join as pjoin
 
@@ -23,6 +24,14 @@ from torch.nn import CrossEntropyLoss, Dropout, Softmax, Linear, Conv2d, LayerNo
 from torch.nn.modules.utils import _pair
 import torch.nn.functional as F
 from scipy import ndimage
+
+
+def to_3d(x):
+    return rearrange(x, 'b c h w -> b (h w) c')
+
+
+def to_4d(x, h, w):
+    return rearrange(x, 'b (h w) c -> b c h w', h=h, w=w)
 
 logger = logging.getLogger(__name__)
 
@@ -121,17 +130,19 @@ class Embeddings(nn.Module):
 
     def __init__(self, img_size, grid, hidden_size, dropout_rate, in_channels=3, old=1):
         super(Embeddings, self).__init__()
-        # img_size = _pair(img_size)
+        img_size = _pair(img_size)
+        # img_size = tuple(img_size, img_size // 2)
         grid_size = grid
-        patch_size = (img_size[0] // 16 // grid_size[0], img_size[1] // 16 // grid_size[1])
-        patch_size_real = (patch_size[0] * 16, patch_size[1] * 16)
-        n_patches = (img_size[0] // patch_size_real[0]) * (img_size[1] // patch_size_real[1])
+        patch_size = (img_size[0] // 32 // grid_size[0], img_size[1] // 32 // grid_size[1])
+        patch_size_real = (patch_size[0] * 32, patch_size[1] * 32)
+        n_patches = (img_size[0] // patch_size_real[0]) * (img_size[1] // patch_size_real[1]) * 2
         in_channels = 1024
         # Learnable patch embeddings
         self.patch_embeddings = Conv2d(in_channels=in_channels,
                                        out_channels=hidden_size,
                                        kernel_size=patch_size,
-                                       stride=patch_size)
+                                       stride=patch_size,
+                                       padding_mode="reflect")
         # learnable positional encodings
         self.positional_encoding = nn.Parameter(torch.zeros(1, n_patches, hidden_size))
         self.dropout = Dropout(dropout_rate)
@@ -304,8 +315,10 @@ class ART_block(nn.Module):
             embedding_output = self.embeddings(down_sampled)
             # feed to transformer
             transformer_out, attn_weights = self.transformer(embedding_output)
+            # print(transformer_out.shape, x.shape)
             B, n_patch, hidden = transformer_out.size()  # reshape from (B, n_patch, hidden) to (B, h, w, hidden)
-            h, w = int(np.sqrt(n_patch)), int(np.sqrt(n_patch))
+            # print(n_patch)
+            h, w = int(np.sqrt(n_patch * 2)), int(np.sqrt(n_patch // 2))
             transformer_out = transformer_out.permute(0, 2, 1)
             transformer_out = transformer_out.contiguous().view(B, hidden, h, w)
             # upsample transformer output
@@ -330,7 +343,7 @@ class ResViT(nn.Module):
                  input_dim=1,
                  grid=(16, 16),
                  old=1,
-                 img_size=(512, 256),
+                 img_size=512,
                  output_dim=8,
                  vis=False):
         super(ResViT, self).__init__()

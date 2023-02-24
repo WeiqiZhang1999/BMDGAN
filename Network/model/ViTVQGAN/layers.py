@@ -156,6 +156,21 @@ class Transformer(nn.Module):
 
         return self.norm(x)
 
+class TransformerBlock(nn.Module):
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type):
+        super(TransformerBlock, self).__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn = Attention(dim, num_heads, bias)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.ffn(self.norm2(x))
+
+        return x
+
 
 class ViTEncoder(nn.Module):
     def __init__(self, image_size: Union[Tuple[int, int], int], patch_size: Union[Tuple[int, int], int],
@@ -227,3 +242,32 @@ class ViTDecoder(nn.Module):
 
     def get_last_layer(self) -> nn.Parameter:
         return self.to_pixel[-1].weight
+
+
+class BMDFormer(nn.Module):
+    def __init__(self,
+                 image_size,
+                 patch_size,
+                 inp_channels=1,
+                 out_channels=2,
+                 dim=48,
+                 num_blocks=[4, 6, 6, 8],
+                 ):
+
+        super(BMDFormer, self).__init__()
+
+        image_height, image_width = image_size if isinstance(image_size, tuple) \
+                                    else (image_size, image_size // 2)
+        patch_height, patch_width = patch_size if isinstance(patch_size, tuple) \
+                                    else (patch_size, patch_size)
+
+        assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
+        en_pos_embedding = get_2d_sincos_pos_embed(dim, (image_height // patch_height, image_width // patch_width))
+        self.to_patch_embedding = nn.Sequential(
+            nn.Conv2d(inp_channels, dim, kernel_size=patch_size, stride=patch_size),
+            Rearrange('b c h w -> b (h w) c'),
+        )
+        self.en_pos_embedding = nn.Parameter(torch.from_numpy(en_pos_embedding).float().unsqueeze(0), requires_grad=False)
+
+
+

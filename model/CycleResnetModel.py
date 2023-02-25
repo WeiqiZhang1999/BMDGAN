@@ -647,7 +647,7 @@ class CycleResnetModel(TrainingModelInt):
         return np.sum((pred_values - mean) * (y_values - mean)) / (n * s2)
 
 
-class RestomerModelInference(InferenceModelInt):
+class CycleResnetModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_config):

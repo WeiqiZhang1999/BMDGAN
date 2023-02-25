@@ -97,9 +97,9 @@ class CycleResnetModel(TrainingModelInt):
                 self.MAX_VAL_DXA_MASK_DRR_2k = 115.0
             else:
                 self.MIN_VAL_DXA_DRR_2k = 0.
-                self.MAX_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 51901.91796875
                 self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-                self.MAX_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 88.125
 
 
     def config_optimizer(self):

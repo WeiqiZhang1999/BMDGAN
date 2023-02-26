@@ -445,8 +445,8 @@ class CycleResnetModel(TrainingModelInt):
                 DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_l1, DDPHelper.ReduceOp.AVG)
 
-            ret["L1_CT-aBMD_PCC"] = pcc_l1
-            ret["L1_CT-aBMD_ICC"] = icc_l1
+            ret["L1_CT-vBMD_PCC"] = pcc_l1
+            ret["L1_CT-vBMD_ICC"] = icc_l1
 
             inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
             gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
@@ -455,8 +455,8 @@ class CycleResnetModel(TrainingModelInt):
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_l2, DDPHelper.ReduceOp.AVG)
-            ret["L2_CT-aBMD_PCC"] = pcc_l2
-            ret["L2_CT-aBMD_ICC"] = icc_l2
+            ret["L2_CT-vBMD_PCC"] = pcc_l2
+            ret["L2_CT-vBMD_ICC"] = icc_l2
 
             inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
             gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
@@ -465,8 +465,8 @@ class CycleResnetModel(TrainingModelInt):
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_l3, DDPHelper.ReduceOp.AVG)
-            ret["L3_CT-aBMD_PCC"] = pcc_l3
-            ret["L3_CT-aBMD_ICC"] = icc_l3
+            ret["L3_CT-vBMD_PCC"] = pcc_l3
+            ret["L3_CT-vBMD_ICC"] = icc_l3
 
             inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
             gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
@@ -475,8 +475,8 @@ class CycleResnetModel(TrainingModelInt):
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_l4, DDPHelper.ReduceOp.AVG)
-            ret["L4_CT-aBMD_PCC"] = pcc_l4
-            ret["L4_CT-aBMD_ICC"] = icc_l4
+            ret["L4_CT-vBMD_PCC"] = pcc_l4
+            ret["L4_CT-vBMD_ICC"] = icc_l4
 
             all_gt_bmds = gt_bmds_L1.tolist() + gt_bmds_L2.tolist() + gt_bmds_L3.tolist() + gt_bmds_L4.tolist()
             all_inference_ai_list = inference_ai_list_L1.tolist() + inference_ai_list_L2.tolist() + inference_ai_list_L3.tolist() + inference_ai_list_L4.tolist()
@@ -485,8 +485,8 @@ class CycleResnetModel(TrainingModelInt):
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc_all, DDPHelper.ReduceOp.AVG)
                 DDPHelper.all_reduce(icc_all, DDPHelper.ReduceOp.AVG)
-            ret["ALL_CT-aBMD_PCC"] = pcc_all
-            ret["ALL_CT-aBMD_ICC"] = icc_all
+            ret["ALL_CT-vBMD_PCC"] = pcc_all
+            ret["ALL_CT-vBMD_ICC"] = icc_all
 
 
         if not self.pretrain_stage:

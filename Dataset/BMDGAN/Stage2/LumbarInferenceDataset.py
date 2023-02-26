@@ -168,7 +168,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
 
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_38_lat_5_fold_new.json"), 'r') as f:
+        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new.json"), 'r') as f:
             training_case_names = json.load(f)[str(split_fold)]["test"]
 
 

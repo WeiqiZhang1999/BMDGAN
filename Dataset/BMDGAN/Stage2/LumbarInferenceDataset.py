@@ -188,7 +188,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
         self.mask_pool = []
         for case_name in training_case_names:
 
-            case_name = case_name[3:]
+            # case_name = case_name[3:]
             xp_case_name = f"Xp_{case_name}_{self.view}.mhd"
             drr_case_name = f"DRR_{case_name}_{self.view}.mhd"
             mask_case_name = drr_case_name

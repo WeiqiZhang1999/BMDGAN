@@ -163,8 +163,10 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
                  load_size: tuple[int, int],
                  aug_conf: str,
                  n_worker,
+                 view='AP',
                  preload=True,
                  verbose=False):
+        self.view = view
         self.split_fold = split_fold
         self.image_size = image_size
         self.load_size = load_size
@@ -183,11 +185,11 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             training_case_names = json.load(f)[str(split_fold)]["train"]
 
 
-        self.xp_root = OSHelper.path_join(self.data_root, "20230128_Lumbar_Xp_AP")
+        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           "20230128_Lumbar_DRRs_perspective_calibrated_AP")
+                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}")
         self.mask_root = OSHelper.path_join(self.data_root,
-                                            "20230128_Lumbar_DRRs_perspective_binary_mask_AP")
+                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}")
 
 
         self.xp_pool = []

@@ -12,6 +12,7 @@ import torch.nn as nn
 from functools import partial
 
 from .multihead_isa_pool_attention import InterlacedPoolAttention
+from .efficient_attention import EfficientAttention
 from .ffn_block import MlpDWBN
 
 
@@ -86,6 +87,75 @@ class GeneralTransformerBlock(nn.Module):
             window_size=window_size,
             rpe=True,
             dropout=attn_drop,
+        )
+
+        self.norm1 = norm_layer(self.dim)
+        self.norm2 = norm_layer(self.out_dim)
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        mlp_hidden_dim = int(self.dim * mlp_ratio)
+
+        self.mlp = MlpDWBN(
+            in_features=self.dim,
+            hidden_features=mlp_hidden_dim,
+            out_features=self.out_dim,
+            act_layer=act_layer,
+            dw_act_layer=act_layer,
+            drop=drop,
+            norm_type=norm_type,
+            padding_type=padding_type
+        )
+
+    def forward(self, x, mask=None):
+        B, C, H, W = x.size()
+        # reshape
+        x = x.view(B, C, -1).permute(0, 2, 1).contiguous()
+        # Attention
+        x = x + self.drop_path(self.attn(self.norm1(x), H, W))
+        # FFN
+        x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
+        # reshape
+        x = x.permute(0, 2, 1).view(B, C, H, W).contiguous()
+        return x
+
+    def extra_repr(self):
+        # (Optional)Set the extra information about this module. You can test
+        # it by printing an object of this class.
+        return "num_heads={}, window_size={}, mlp_ratio={}".format(
+            self.num_heads, self.window_size, self.mlp_ratio
+        )
+
+
+class EfficientTransformerBlock(nn.Module):
+    expansion = 1
+
+    def __init__(
+            self,
+            inplanes,
+            planes,
+            num_heads,
+            window_size=7,
+            mlp_ratio=4.0,
+            qkv_bias=True,
+            qk_scale=None,
+            drop=0.0,
+            attn_drop=0.0,
+            drop_path=0.0,
+            act_layer=nn.GELU,
+            norm_layer=partial(nn.LayerNorm, eps=1e-6),
+            norm_type=None,
+            padding_type=None,
+    ):
+        super(EfficientTransformerBlock, self).__init__()
+        self.dim = inplanes
+        self.out_dim = planes
+        self.num_heads = num_heads
+        self.window_size = window_size
+        self.mlp_ratio = mlp_ratio
+        self.attn = EfficientAttention(
+            self.dim,
+            self.dim,
+            num_heads,
+            self.dim,
         )
 
         self.norm1 = norm_layer(self.dim)

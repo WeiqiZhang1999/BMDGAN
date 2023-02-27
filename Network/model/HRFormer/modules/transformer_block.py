@@ -177,9 +177,11 @@ class EfficientTransformerBlock(nn.Module):
     def forward(self, x, mask=None):
         B, C, H, W = x.size()
         # reshape
-        # x = x.view(B, C, -1).permute(0, 2, 1).contiguous()
+        x = x.view(B, C, -1).permute(0, 2, 1).contiguous()
+        x = self.norm1(x)
+        x = rearrange(x, 'b (h w) c -> b c h w', h=H, w=W)
         # Attention
-        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.attn(x))
         x = rearrange(x, 'b c h w -> b (h w) c')
         # FFN
         x = x + self.drop_path(self.mlp(self.norm2(x), H, W))

@@ -10,7 +10,7 @@ import logging
 import torch
 import torch.nn as nn
 from functools import partial
-
+from einops import rearrange
 from .multihead_isa_pool_attention import InterlacedPoolAttention
 from .efficient_attention import EfficientAttention
 from .ffn_block import MlpDWBN
@@ -179,7 +179,8 @@ class EfficientTransformerBlock(nn.Module):
         # reshape
         x = x.view(B, C, -1).permute(0, 2, 1).contiguous()
         # Attention
-        x = x + self.drop_path(self.attn(self.norm1(x), H, W))
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = rearrange(x, 'b c h w -> b (h w) c')
         # FFN
         x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
         # reshape

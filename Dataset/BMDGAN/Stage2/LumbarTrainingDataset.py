@@ -250,6 +250,9 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
     def __len__(self):
         return len(self.xp_pool)
 
+    def get_item(self, idx):
+        return self.__getitem__(idx)
+
     def __getitem__(self, idx):
         xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 

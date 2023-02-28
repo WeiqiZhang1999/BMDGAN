@@ -158,7 +158,9 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
                  n_worker,
                  view='AP',
                  preload=True,
+                 need_mask=True,
                  verbose=False):
+        self.need_mask = need_mask
         self.view = view
         self.split_fold = split_fold
         self.image_size = image_size
@@ -270,8 +272,12 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
-        return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
-                "case_name": case_name, "DXABMD": dxa_bmd}
+        if self.need_mask:
+            return {"xp": xp, "drr": drr_with_mask, "spacing": spacing,
+                    "case_name": case_name, "DXABMD": dxa_bmd}
+        else:
+            return {"xp": xp, "drr": drr, "spacing": spacing,
+                    "case_name": case_name, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

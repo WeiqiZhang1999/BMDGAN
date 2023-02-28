@@ -164,8 +164,10 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
                  aug_conf: str,
                  n_worker,
                  view='AP',
+                 need_mask=True,
                  preload=True,
                  verbose=False):
+        self.need_mask = need_mask
         self.view = view
         self.split_fold = split_fold
         self.image_size = image_size
@@ -288,7 +290,10 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
-        return {"xp": xp, "drr": drr_with_mask}
+        if self.need_mask:
+            return {"xp": xp, "drr": drr_with_mask}
+        else:
+            return {"xp": xp, "drr": drr}
 
     @staticmethod
     def _load_image(load_path, load_size):

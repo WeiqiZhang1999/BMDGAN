@@ -35,7 +35,9 @@ class LumbarInferenceDataset(Dataset):
                  view='AP',
                  debug=False,
                  preload=True,
+                 need_mask=True,
                  verbose=False):
+        self.need_mask = need_mask
         self.split_fold = split_fold
         self.image_size = image_size
         self.n_worker = n_worker
@@ -144,8 +146,10 @@ class LumbarInferenceDataset(Dataset):
 
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
-        return {"xp": xp, "drr": drr_with_mask, "spacing": spacing, "case_name": case_name}
-
+        if self.need_mask:
+            return {"xp": xp, "drr": drr_with_mask, "spacing": spacing, "case_name": case_name}
+        else:
+            return {"xp": xp, "drr": drr, "spacing": spacing, "case_name": case_name}
 
     @staticmethod
     def _load_image(load_path, load_size):

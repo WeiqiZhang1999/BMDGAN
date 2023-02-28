@@ -174,7 +174,7 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
             with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new_2022.json"), 'r') as f:
                 training_case_names = json.load(f)[str(split_fold)]["test"]
         elif self.view == 'AP':
-            with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_43_5_fold_new.json"), 'r') as f:
+            with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_43_ap_5_fold_new_42.json"), 'r') as f:
                 training_case_names = json.load(f)[str(split_fold)]["test"]
 
 

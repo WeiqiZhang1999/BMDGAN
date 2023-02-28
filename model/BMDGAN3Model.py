@@ -33,7 +33,7 @@ from .InferenceModelInt import InferenceModelInt
 from Utils.MetaImageHelper2 import MetaImageHelper
 
 
-class BMDGANModel(TrainingModelInt):
+class BMDGAN3Model(TrainingModelInt):
 
     def __init__(self,
                  optimizer_config,

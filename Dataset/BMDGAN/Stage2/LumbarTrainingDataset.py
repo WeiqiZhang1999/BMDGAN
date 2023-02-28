@@ -183,9 +183,12 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
                 self.transformer = ImageTransformer(**self.transformer_param_dict[aug_conf])
 
         self.data_root = OSHelper.format_path(r"/win/salmon\user\zhangwq\data")
-        with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new.json"), 'r') as f:
-            training_case_names = json.load(f)[str(split_fold)]["train"]
-
+        if self.view == 'LAT':
+            with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new_2022.json"), 'r') as f:
+                training_case_names = json.load(f)[str(split_fold)]["train"]
+        elif self.view == 'AP':
+            with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_43_5_fold_new.json"), 'r') as f:
+                training_case_names = json.load(f)[str(split_fold)]["train"]
 
         self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_cropped")
         self.drr_root = OSHelper.path_join(self.data_root,

@@ -190,11 +190,11 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new_2022.json"), 'r') as f:
                 training_case_names = json.load(f)[str(split_fold)]["train"]
 
-        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_cropped")
+        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_resized")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_cropped")
+                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_resized")
         self.mask_root = OSHelper.path_join(self.data_root,
-                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_cropped")
+                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_resized")
 
 
         self.xp_pool = []

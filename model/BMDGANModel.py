@@ -46,12 +46,14 @@ class BMDGANModel(TrainingModelInt):
                  pretrain_stage=False,
                  log_pcc=False,
                  view='AP',
+                 visual_training=False,
                  ):
 
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
         self.pretrain_stage = pretrain_stage
+        self.visual_training = visual_training
 
         # Prepare models
         self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
@@ -133,6 +135,9 @@ class BMDGANModel(TrainingModelInt):
         log = {}
         xp = data["xp"].to(self.device)
         drr = data["drr"].to(self.device)
+        if self.visual_training:
+            xp_visual = xp.cpu().numpy()
+
         fake_drr = self.netG_up(self.netG_fus(self.netG_enc(xp)))
 
         D_pred_fake = self.netD(torch.cat((xp, fake_drr), dim=1))

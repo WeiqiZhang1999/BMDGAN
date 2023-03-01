@@ -178,11 +178,11 @@ class LumbarBinaryMaskInferenceDataset(Dataset):
                 training_case_names = json.load(f)[str(split_fold)]["test"]
 
 
-        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_resized")
+        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_padding")
         self.drr_root = OSHelper.path_join(self.data_root,
-                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_resized")
+                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_padding")
         self.mask_root = OSHelper.path_join(self.data_root,
-                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_resized")
+                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_padding")
 
         self.bmd_df_root = OSHelper.path_join(self.data_root, "bmd_analyze.xlsx")
         self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)

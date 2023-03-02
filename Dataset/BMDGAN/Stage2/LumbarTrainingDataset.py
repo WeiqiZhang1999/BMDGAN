@@ -166,7 +166,9 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
                  view='AP',
                  need_mask=True,
                  preload=True,
+                 resize='pad',
                  verbose=False):
+        self.resize = resize
         self.need_mask = need_mask
         self.view = view
         self.split_fold = split_fold
@@ -190,12 +192,18 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             with open(OSHelper.path_join(self.data_root, r"osaka_lumbar_xp_37_lat_5_fold_new_2022.json"), 'r') as f:
                 training_case_names = json.load(f)[str(split_fold)]["train"]
 
-        self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_padding")
-        self.drr_root = OSHelper.path_join(self.data_root,
-                                           f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_padding")
-        self.mask_root = OSHelper.path_join(self.data_root,
-                                            f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_padding")
-
+        if self.resize == 'pad':
+            self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_padding")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_padding")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_padding")
+        elif self.resize == 'crop':
+            self.xp_root = OSHelper.path_join(self.data_root, f"20230128_Lumbar_Xp_{self.view}_cropped")
+            self.drr_root = OSHelper.path_join(self.data_root,
+                                               f"20230128_Lumbar_DRRs_perspective_calibrated_{self.view}_cropped")
+            self.mask_root = OSHelper.path_join(self.data_root,
+                                                f"20230128_Lumbar_DRRs_perspective_binary_mask_{self.view}_cropped")
 
         self.xp_pool = []
         self.drr_pool = []

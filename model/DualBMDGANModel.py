@@ -869,7 +869,10 @@ class BMDGANModel(TrainingModelInt):
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
-        ret = {"Xray": xps}
+        xps_AP = xps[:, 0, :, :].unsqueeze(1)
+        xps_LAT = xps[:, 1, :, :].unsqueeze(1)
+        ret = {"Xray_AP": xps_AP}
+        ret.update({"Xray_LAT": xps_LAT})
         for i in [0, 1, 2, 3]:
             drrs_ = drrs[:, i, :, :].unsqueeze(1)
             masks = drrs[:, i + 4, :, :].unsqueeze(1)

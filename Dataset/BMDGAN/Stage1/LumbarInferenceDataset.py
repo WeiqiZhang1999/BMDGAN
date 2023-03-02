@@ -280,7 +280,7 @@ class DualLumbarInferenceDataset(Dataset):
             xps_AP = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                               desc="Loading Xp" if self.verbose else None,
                                               mininterval=60, maxinterval=180)
-            for xp_dao, (xp, spacing) in zip(self.xp_pool_AP, xps_AP):
+            for xp_dao_AP, (xp, spacing) in zip(self.xp_pool_AP, xps_AP):
                 xp_dao_AP.image_data = xp
                 xp_dao_AP.spacing = spacing
 
@@ -290,7 +290,7 @@ class DualLumbarInferenceDataset(Dataset):
             drrs_AP = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                desc="Loading DRR" if self.verbose else None,
                                                mininterval=60, maxinterval=180)
-            for drr_dao, (drr, spacing) in zip(self.drr_pool_AP, drrs_AP):
+            for drr_dao_AP, (drr, spacing) in zip(self.drr_pool_AP, drrs_AP):
                 drr_dao_AP.image_data = drr
                 drr_dao_AP.spacing = spacing
 
@@ -300,7 +300,7 @@ class DualLumbarInferenceDataset(Dataset):
             masks_AP = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                desc="Loading Mask DRR" if self.verbose else None,
                                                mininterval=60, maxinterval=180)
-            for mask_dao, (mask, spacing) in zip(self.mask_pool_AP, masks_AP):
+            for mask_dao_AP, (mask, spacing) in zip(self.mask_pool_AP, masks_AP):
                 mask_dao_AP.image_data = mask
                 mask_dao_AP.spacing = spacing
 
@@ -310,7 +310,7 @@ class DualLumbarInferenceDataset(Dataset):
             xps_LAT = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                               desc="Loading Xp" if self.verbose else None,
                                               mininterval=60, maxinterval=180)
-            for xp_dao, (xp, spacing) in zip(self.xp_pool_LAT, xps_LAT):
+            for xp_dao_LAT, (xp, spacing) in zip(self.xp_pool_LAT, xps_LAT):
                 xp_dao_LAT.image_data = xp
                 xp_dao_LAT.spacing = spacing
 
@@ -320,7 +320,7 @@ class DualLumbarInferenceDataset(Dataset):
             drrs_LAT = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                desc="Loading DRR" if self.verbose else None,
                                                mininterval=60, maxinterval=180)
-            for drr_dao, (drr, spacing) in zip(self.drr_pool_LAT, drrs_LAT):
+            for drr_dao_LAT, (drr, spacing) in zip(self.drr_pool_LAT, drrs_LAT):
                 drr_dao_LAT.image_data = drr
                 drr_dao_LAT.spacing = spacing
 
@@ -330,7 +330,7 @@ class DualLumbarInferenceDataset(Dataset):
             masks_LAT = MultiProcessingHelper().run(args=args, func=self._load_image, n_workers=self.n_worker,
                                                desc="Loading Mask DRR" if self.verbose else None,
                                                mininterval=60, maxinterval=180)
-            for mask_dao, (mask, spacing) in zip(self.mask_pool_LAT, masks_LAT):
+            for mask_dao_LAT, (mask, spacing) in zip(self.mask_pool_LAT, masks_LAT):
                 mask_dao_LAT.image_data = mask
                 mask_dao_LAT.spacing = spacing
 

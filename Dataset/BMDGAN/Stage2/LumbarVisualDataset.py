@@ -7,7 +7,7 @@
 
 
 from torch.utils.data import Dataset
-from .LumbarInferenceDataset import LumbarInferenceDataset, LumbarBinaryMaskInferenceDataset
+from .LumbarInferenceDataset import LumbarInferenceDataset, LumbarBinaryMaskInferenceDataset, AndoInferenceDataset
 from .LumbarTrainingDataset import LumbarBinaryMaskTrainingDataset
 import numpy as np
 
@@ -43,9 +43,10 @@ class LumbarBinaryMaskVisualDataset(Dataset):
         idx = np.random.randint(0, len(self.backbone_dataset))
         return self.backbone_dataset.get_item(idx)
 
-class TrainingVisualDataset(Dataset):
 
-    def __init__(self, infer_dataset: LumbarBinaryMaskTrainingDataset, batch_size=6, verbose=False):
+class AndoVisualDataset(Dataset):
+
+    def __init__(self, infer_dataset: AndoInferenceDataset, batch_size=6, verbose=False):
         super().__init__()
         self.backbone_dataset = infer_dataset
         self.batch_size = batch_size

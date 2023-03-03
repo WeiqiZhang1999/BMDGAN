@@ -228,13 +228,13 @@ class DXABMDGANModel(TrainingModelInt):
                 gt_dxa_bmd.append(dxa_bmds[j])
 
 
-            fake_dxa_bmd = torch.Tensor(fake_dxa_bmd).view(-1).cpu().numpy()
-            gt_dxa_bmd = torch.Tensor(gt_dxa_bmd).view(-1).cpu().numpy()
-            dxa_pcc_all += pearsonr(gt_dxa_bmd, fake_dxa_bmd)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(dxa_pcc_all, DDPHelper.ReduceOp.AVG)
+        fake_dxa_bmd = torch.Tensor(fake_dxa_bmd).view(-1).cpu().numpy()
+        gt_dxa_bmd = torch.Tensor(gt_dxa_bmd).view(-1).cpu().numpy()
+        dxa_pcc_all += pearsonr(gt_dxa_bmd, fake_dxa_bmd)[0]
+        if DDPHelper.is_initialized():
+            DDPHelper.all_reduce(dxa_pcc_all, DDPHelper.ReduceOp.AVG)
 
-            ret["ALL_DXABMD_PCC"] = dxa_pcc_all
+        ret["ALL_DXABMD_PCC"] = dxa_pcc_all
 
         return ret
 

@@ -384,7 +384,7 @@ class AndoInferenceDataset(Dataset):
         if self.preload:
             xp = xp_dao.image_data.copy()
         else:
-            xp = self._load_image(xp_dao.image_path, self.image_size)
+            xp, _ = self._load_image(xp_dao.image_path, self.image_size)
         case_name = xp_dao.case_name
 
         return {"xp": xp, "DXABMD": dxa_bmd, "case_name": case_name}

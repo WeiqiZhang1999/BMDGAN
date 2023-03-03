@@ -347,6 +347,7 @@ class DXABMDGANModel(TrainingModelInt):
         return np.sum((pred_values - mean) * (y_values - mean)) / (n * s2)
 
 
+
 class DXABMDGANModelInference(InferenceModelInt):
 
     def __init__(self,

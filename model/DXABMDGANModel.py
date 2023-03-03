@@ -239,20 +239,16 @@ class DXABMDGANModel(TrainingModelInt):
     @torch.no_grad()
     def log_visual(self, data):
         xps = data["xp"].to(self.device)
-        drrs = data["drr"].to(self.device)
+
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
         ret = {"Xray": xps}
         for i in [0, 1, 2, 3]:
-            drrs_ = drrs[:, i, :, :].unsqueeze(1)
-            masks = drrs[:, i + 4, :, :].unsqueeze(1)
             fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
             fake_masks = fake_drrs[:, i + 4, :, :].unsqueeze(1)
 
             bone_level = i + 1
-            ret.update({f"L{bone_level}_DRR": drrs_})
-            ret.update({f"L{bone_level}_Mask_DRR": masks})
             ret.update({f"L{bone_level}_Fake_DRR": fake_drrs_})
             ret.update({f"L{bone_level}_Fake_Mask_DRR": fake_masks})
 

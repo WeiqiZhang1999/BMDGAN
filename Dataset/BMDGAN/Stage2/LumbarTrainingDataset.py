@@ -346,7 +346,6 @@ class AndoTrainingDataset(Dataset):
                  need_mask=True,
                  preload=True,
                  verbose=False):
-        self.resize = resize
         self.need_mask = need_mask
         self.view = view
         self.split_fold = split_fold

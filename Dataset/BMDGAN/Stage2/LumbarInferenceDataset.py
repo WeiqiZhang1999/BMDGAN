@@ -343,13 +343,13 @@ class AndoInferenceDataset(Dataset):
         self.xp_pool = []
 
         self.bmd_pool = []
-        self.bmd_df_root = OSHelper.path_join(self.data_root, "bmd_analyze.xlsx")
+        self.bmd_df_root = OSHelper.path_join(self.data_root, "Ando_catalog_phase3_clean.xlsx")
         self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
         for case_name in training_case_names:
             xp_case_name = f"{case_name}.mhd"
             case_xp_dir = OSHelper.path_join(self.xp_root, xp_case_name)
 
-            self.bmd_pool.append(self.bmd_df.loc[case_name, 'DXA Spine'])
+            self.bmd_pool.append(self.bmd_df.loc[int(case_name), 'DXA Spine'])
 
             xp_dao = MetaImageDAO(case_name, image_path=case_xp_dir)
             self.xp_pool.append(xp_dao)

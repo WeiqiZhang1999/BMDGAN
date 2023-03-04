@@ -7,6 +7,7 @@
 
 import itertools
 
+import pandas as pd
 from Utils.DDPHelper import DDPHelper
 import torch
 import logging
@@ -695,6 +696,11 @@ class BMDGANModelInference(InferenceModelInt):
     def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):
         assert data_module.inference_dataloader is not None
         iterator = data_module.inference_dataloader
+
+        inference_average_intensity_for_DXABMD_list = [[], [], [], []]
+        inference_average_intensity_for_CTBMD_list = [[], [], [], []]
+        inference_case_names = []
+
         if self.rank == 0:
             iterator = tqdm(data_module.inference_dataloader,
                             total=len(data_module.inference_dataloader),
@@ -704,6 +710,7 @@ class BMDGANModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
+            inference_case_names.append(case_names)
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
 
             B = xps.shape[0]
@@ -718,6 +725,11 @@ class BMDGANModelInference(InferenceModelInt):
                                       fake_drr_with_mask,
                                       space,
                                       compress=True)
+                for j in range(4):
+                    inference_average_intensity_for_DXABMD_list[j].append(
+                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
+                    inference_average_intensity_for_CTBMD_list[j].append(
+                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
         assert data_module.training_dataloader is not None
         train_iterator = data_module.training_dataloader
@@ -726,24 +738,101 @@ class BMDGANModelInference(InferenceModelInt):
                             total=len(data_module.training_dataloader),
                             mininterval=60, maxinterval=180, )
 
+        train_average_intensity_for_DXABMD_list = [[], [], [], []]
+        train_average_intensity_for_CTBMD_list = [[], [], [], []]
+        dxabmd_list = [[], [], [], []]
+        ctbmd_list = [[], [], [], []]
         for data in train_iterator:
             train_xps = data["xp"].to(self.device)
-            train_spaces = data["spacing"].numpy()
-            train_case_names = data["case_name"]
+            train_dxa_bmd = data["DXABMD"].numpy()
+            train_drrs = data["drr"].to(self.device)
             train_fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(train_xps))).cpu().numpy()
 
             B = train_xps.shape[0]
 
+
             for i in range(B):
                 fake_drr_with_mask = train_fake_drrs[i]  # (8, H, W)
-                case_name = train_case_names[i]
-                space = train_spaces[i]
-                save_dir = OSHelper.path_join(output_dir, "train_fake_drr")
-                OSHelper.mkdirs(save_dir)
-                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
-                                      fake_drr_with_mask,
-                                      space,
-                                      compress=True)
+                gt_drr_with_mask = train_drrs[i]
+                for j in range(4):
+                    dxabmd_list[j].append(train_dxa_bmd[i][j])
+                    ctbmd_list[j].append(self._calc_average_intensity_with_mask(gt_drr_with_mask[j], gt_drr_with_mask[j + 4]))
+                    train_average_intensity_for_DXABMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
+                    train_average_intensity_for_CTBMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
+
+        df_dict = {}
+
+        for i in range(4):
+            dxabmd_list_L1 = torch.cat(dxabmd_list[i], dim=0).cpu().numpy()  # (N,)
+            ctbmd_list_L1 = torch.cat(ctbmd_list[i], dim=0).cpu().numpy()  # (N,)
+            train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
+            train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[i])  # (N,)
+
+            inference_average_intensity_for_DXABMD_list_L1 = np.array(inference_average_intensity_for_DXABMD_list[i])
+            inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[i])
+            pred_dxabmd_list_L1 = None
+            pred_ctbmd_list_L1 = None
+            if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[i]):
+                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+            if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[i]):
+                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+
+            deg = 1
+            if pred_dxabmd_list_L1 is None:
+                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+                p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
+                for i in range(deg + 1):
+                    pred_dxabmd_list_L1 += p_dxabmd[i] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - i))
+
+            if pred_ctbmd_list_L1 is None:
+                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+                p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
+                for i in range(deg + 1):
+                    pred_ctbmd_list_L1 += p_ctbmd[i] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - i))
+
+            if i == 0:
+                df_dict.update({"case_name": inference_case_names})
+                df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
+                df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
+                df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+                df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+            else:
+                df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
+                df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
+                df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+                df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+
+        df = pd.DataFrame(df_dict)
+        save_path = OSHelper.path_join(output_dir, f"calibrated_bmd.csv")
+        df.to_excel(save_path)
+
+    @staticmethod
+    def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:
+        image_mean = image.sum() / (image > 0.).sum()
+        image[image < 0.2 * image_mean] = 0.
+        if isinstance(image, torch.Tensor):
+            mask = torch.tensor((image > 0.), dtype=image.dtype)
+        else:
+            mask = (image > 0.).astype(image.dtype)
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = image.sum()
+        return numerator / area
+
+
+    @staticmethod
+    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor
+                                         ) -> float | np.ndarray | torch.Tensor:
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = image.sum()
+        return numerator / area
 
 
 def weights_init(m):

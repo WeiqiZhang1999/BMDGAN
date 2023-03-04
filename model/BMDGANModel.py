@@ -710,8 +710,8 @@ class BMDGANModelInference(InferenceModelInt):
         assert data_module.inference_dataloader is not None
         iterator = data_module.inference_dataloader
 
-        inference_average_intensity_for_DXABMD_list = [[], [], [], []]
-        inference_average_intensity_for_CTBMD_list = [[], [], [], []]
+        inference_average_intensity_for_DXABMD_list = [[], [], [], [], []]
+        inference_average_intensity_for_CTBMD_list = [[], [], [], [], []]
         inference_case_names = []
 
         if self.rank == 0:
@@ -747,6 +747,11 @@ class BMDGANModelInference(InferenceModelInt):
                     inference_average_intensity_for_CTBMD_list[j].append(
                         self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
+                inference_average_intensity_for_DXABMD_list[4].append(
+                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                inference_average_intensity_for_CTBMD_list[4].append(
+                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+
         assert data_module.training_dataloader is not None
         train_iterator = data_module.training_dataloader
         if self.rank == 0:
@@ -754,10 +759,11 @@ class BMDGANModelInference(InferenceModelInt):
                             total=len(data_module.training_dataloader),
                             mininterval=60, maxinterval=180, )
 
-        train_average_intensity_for_DXABMD_list = [[], [], [], []]
-        train_average_intensity_for_CTBMD_list = [[], [], [], []]
-        dxabmd_list = [[], [], [], []]
-        ctbmd_list = [[], [], [], []]
+
+        train_average_intensity_for_DXABMD_list = [[], [], [], [], []]
+        train_average_intensity_for_CTBMD_list = [[], [], [], [], []]
+        dxabmd_list = [[], [], [], [], []]
+        ctbmd_list = [[], [], [], [], []]
         for data in train_iterator:
             train_xps = data["xp"].to(self.device)
             train_dxa_bmd = data["DXABMD"]
@@ -780,9 +786,16 @@ class BMDGANModelInference(InferenceModelInt):
                     train_average_intensity_for_DXABMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
                     train_average_intensity_for_CTBMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
+                dxabmd_list[4].append(train_dxa_bmd[i][4])
+                ctbmd_list[4].append(
+                    self._calc_average_intensity_with_mask(gt_drr_with_mask[:4], gt_drr_with_mask[4:]))
+                train_average_intensity_for_DXABMD_list[4].append(
+                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                train_average_intensity_for_CTBMD_list[4].append(
+                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
         df_dict = {}
 
-        for i in range(4):
+        for i in range(5):
             dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
             ctbmd_list_L1 = np.array(ctbmd_list[i]) # (N,)
             train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
@@ -816,6 +829,11 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+            elif i == 4:
+                df_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
+                df_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
+                df_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+                df_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
             else:
                 df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})

@@ -719,6 +719,32 @@ class BMDGANModelInference(InferenceModelInt):
                                       space,
                                       compress=True)
 
+        assert data_module.training_dataloader is not None
+        train_iterator = data_module.training_dataloader
+        if self.rank == 0:
+            train_iterator = tqdm(data_module.training_dataloader,
+                            total=len(data_module.training_dataloader),
+                            mininterval=60, maxinterval=180, )
+
+        for data in train_iterator:
+            train_xps = data["xp"].to(self.device)
+            train_spaces = data["spacing"].numpy()
+            train_case_names = data["case_name"]
+            train_fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(train_xps))).cpu().numpy()
+
+            B = train_xps.shape[0]
+
+            for i in range(B):
+                fake_drr_with_mask = train_fake_drrs[i]  # (8, H, W)
+                case_name = train_case_names[i]
+                space = train_spaces[i]
+                save_dir = OSHelper.path_join(output_dir, "train_fake_drr")
+                OSHelper.mkdirs(save_dir)
+                MetaImageHelper.write(OSHelper.path_join(save_dir, f"{case_name}.mhd"),
+                                      fake_drr_with_mask,
+                                      space,
+                                      compress=True)
+
 
 def weights_init(m):
     classname = m.__class__.__name__

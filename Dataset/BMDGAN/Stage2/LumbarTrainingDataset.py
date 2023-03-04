@@ -9,6 +9,7 @@ import torch
 from Utils.OSHelper import OSHelper
 from torch.utils.data import Dataset
 import numpy as np
+import pandas as pd
 from Utils.ImageHelper import ImageHelper
 from ImageTransformer.ImageTransformer import ImageTransformer, IdentityTransformer
 from MultiProcessingHelper import MultiProcessingHelper
@@ -208,6 +209,11 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         self.xp_pool = []
         self.drr_pool = []
         self.mask_pool = []
+
+        self.bmd_df_root = OSHelper.path_join(self.data_root, "bmd_analyze.xlsx")
+        self.bmd_df = pd.read_excel(self.bmd_df_root, index_col=0)
+        self.bmd_pool = []
+
         for case_name in training_case_names:
 
             # case_name = case_name[3:]
@@ -224,6 +230,13 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             # for slice_entry in OSHelper.scan_dirs_for_file(case_xp_dir, name_re_pattern=".+\\.mhd$"):
             #     drr_path = OSHelper.path_join(self.drr_root, case_name, slice_entry.name)
             #     assert OSHelper.path_exists(drr_path), drr_path
+            all_bmd_list = []
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L1'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L2'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L3'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'L4'])
+            self.bmd_pool.append(all_bmd_list)
+
             self.xp_pool.append(case_xp_dir)
             self.drr_pool.append(case_drr_dir)
             self.mask_pool.append(case_mask_dir)
@@ -262,6 +275,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         return self.__getitem__(idx)
 
     def __getitem__(self, idx):
+        dxa_bmd = torch.tensor(self.bmd_pool[idx], dtype=torch.float32)
         xp_path, drr_path, mask_path = self.xp_pool[idx], self.drr_pool[idx], self.mask_pool[idx]
 
         if self.preload:
@@ -305,9 +319,9 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
         drr_with_mask = np.concatenate((drr, mask), axis=0)
 
         if self.need_mask:
-            return {"xp": xp, "drr": drr_with_mask}
+            return {"xp": xp, "drr": drr_with_mask, "DXABMD": dxa_bmd}
         else:
-            return {"xp": xp, "drr": drr}
+            return {"xp": xp, "drr": drr, "DXABMD": dxa_bmd}
 
     @staticmethod
     def _load_image(load_path, load_size):

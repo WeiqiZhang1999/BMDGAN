@@ -876,6 +876,7 @@ class BMDGANModelInference(InferenceModelInt):
         all_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
         all_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
+        print(df_dict)
         df = pd.DataFrame(df_dict)
         df.to_excel(OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx"))
         all_df = pd.DataFrame(all_dict)

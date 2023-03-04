@@ -725,7 +725,7 @@ class BMDGANModelInference(InferenceModelInt):
             xps = data["xp"].to(self.device)
             spaces = data["spacing"].numpy()
             case_names = data["case_name"]
-            inference_case_names.append(case_names)
+
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps))).cpu().numpy()
 
             B = xps.shape[0]
@@ -733,6 +733,7 @@ class BMDGANModelInference(InferenceModelInt):
             for i in range(B):
                 fake_drr_with_mask = fake_drrs[i]  # (8, H, W)
                 case_name = case_names[i]
+                inference_case_names.append(case_name)
                 space = spaces[i]
                 save_dir = OSHelper.path_join(output_dir, "fake_drr")
                 OSHelper.mkdirs(save_dir)
@@ -832,7 +833,7 @@ class BMDGANModelInference(InferenceModelInt):
                     pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
 
             if i == 0:
-                df_dict.update({"case_name": inference_case_names[0]})
+                df_dict.update({"case_name": inference_case_names})
                 df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
@@ -870,17 +871,14 @@ class BMDGANModelInference(InferenceModelInt):
             for k in range(deg + 1):
                 pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
 
-        all_dict.update({"case_name": inference_case_names[0]})
-        all_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
-        all_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
-        all_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
-        all_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+        # all_dict.update({"case_name": inference_case_names})
+        df_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
+        df_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
+        df_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+        df_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
-        print(df_dict)
         df = pd.DataFrame(df_dict)
         df.to_excel(OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx"))
-        all_df = pd.DataFrame(all_dict)
-        all_df.to_excel(OSHelper.path_join(output_dir, f"all_calibrated_bmd.xlsx"))
 
     @staticmethod
     def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:

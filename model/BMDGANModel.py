@@ -744,12 +744,11 @@ class BMDGANModelInference(InferenceModelInt):
         ctbmd_list = [[], [], [], []]
         for data in train_iterator:
             train_xps = data["xp"].to(self.device)
-            train_dxa_bmd = data["DXABMD"]
+            train_dxa_bmd = data["DXABMD"].view(-1).cpu().numpy()
             train_drrs = data["drr"].to(self.device)
             train_fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(train_xps))).cpu().numpy()
 
             B = train_xps.shape[0]
-
 
             for i in range(B):
                 fake_drr_with_mask = train_fake_drrs[i]  # (8, H, W)
@@ -763,8 +762,8 @@ class BMDGANModelInference(InferenceModelInt):
         df_dict = {}
 
         for i in range(4):
-            dxabmd_list_L1 = torch.cat(dxabmd_list[i], dim=0).cpu().numpy()  # (N,)
-            ctbmd_list_L1 = torch.cat(ctbmd_list[i], dim=0).cpu().numpy()  # (N,)
+            dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
+            ctbmd_list_L1 = np.array(ctbmd_list[i]) # (N,)
             train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
             train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[i])  # (N,)
 

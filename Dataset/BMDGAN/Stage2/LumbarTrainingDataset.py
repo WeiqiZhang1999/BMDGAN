@@ -235,6 +235,7 @@ class LumbarBinaryMaskTrainingDataset(Dataset):
             all_bmd_list.append(self.bmd_df.loc[case_name, 'L2'])
             all_bmd_list.append(self.bmd_df.loc[case_name, 'L3'])
             all_bmd_list.append(self.bmd_df.loc[case_name, 'L4'])
+            all_bmd_list.append(self.bmd_df.loc[case_name, 'all'])
             self.bmd_pool.append(all_bmd_list)
 
             self.xp_pool.append(case_xp_dir)

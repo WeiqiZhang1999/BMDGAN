@@ -796,7 +796,7 @@ class BMDGANModelInference(InferenceModelInt):
         df_dict = {}
         all_dict = {}
 
-        for i in range(5):
+        for i in range(4):
             dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
             ctbmd_list_L1 = np.array(ctbmd_list[i]) # (N,)
             train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
@@ -830,21 +830,49 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
-            elif i == 4:
-                all_dict.update({"case_name": inference_case_names[0]})
-                all_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
-                all_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
-                all_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
-                all_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
             else:
                 df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
+        dxabmd_list_L1 = np.array(dxabmd_list[4])  # (N,)
+        ctbmd_list_L1 = np.array(ctbmd_list[4])  # (N,)
+        train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i4])  # (N,)
+        train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[4])  # (N,)
+
+        inference_average_intensity_for_DXABMD_list_L1 = np.array(inference_average_intensity_for_DXABMD_list[4])
+        inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[4])
+        pred_dxabmd_list_L1 = None
+        pred_ctbmd_list_L1 = None
+        if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[4]):
+            pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+        if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[4]):
+            pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+
+        deg = 1
+        if pred_dxabmd_list_L1 is None:
+            pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+            p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
+            for k in range(deg + 1):
+                pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
+
+        if pred_ctbmd_list_L1 is None:
+            pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+            p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
+            for k in range(deg + 1):
+                pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
+
+
+        all_dict.update({"case_name": inference_case_names[0]})
+        all_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
+        all_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
+        all_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+        all_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+
         df = pd.DataFrame(df_dict)
         df.to_excel(OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx"))
-        all_df = pd.DataFrame(df_dict)
+        all_df = pd.DataFrame(all_dict)
         all_df.to_excel(OSHelper.path_join(output_dir, f"all_calibrated_bmd.xlsx"))
 
     @staticmethod

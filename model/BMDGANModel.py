@@ -710,8 +710,10 @@ class BMDGANModelInference(InferenceModelInt):
         assert data_module.inference_dataloader is not None
         iterator = data_module.inference_dataloader
 
-        inference_average_intensity_for_DXABMD_list = [[], [], [], [], []]
-        inference_average_intensity_for_CTBMD_list = [[], [], [], [], []]
+        inference_average_intensity_for_DXABMD_list = [[], [], [], []]
+        inference_average_intensity_for_CTBMD_list = [[], [], [], []]
+        all_inference_average_intensity_for_DXABMD_list = []
+        all_inference_average_intensity_for_CTBMD_list = []
         inference_case_names = []
 
         if self.rank == 0:
@@ -747,9 +749,9 @@ class BMDGANModelInference(InferenceModelInt):
                     inference_average_intensity_for_CTBMD_list[j].append(
                         self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
-                inference_average_intensity_for_DXABMD_list[4].append(
+                all_inference_average_intensity_for_DXABMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
-                inference_average_intensity_for_CTBMD_list[4].append(
+                all_inference_average_intensity_for_CTBMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
 
         assert data_module.training_dataloader is not None
@@ -760,10 +762,15 @@ class BMDGANModelInference(InferenceModelInt):
                             mininterval=60, maxinterval=180, )
 
 
-        train_average_intensity_for_DXABMD_list = [[], [], [], [], []]
-        train_average_intensity_for_CTBMD_list = [[], [], [], [], []]
-        dxabmd_list = [[], [], [], [], []]
-        ctbmd_list = [[], [], [], [], []]
+        train_average_intensity_for_DXABMD_list = [[], [], [], []]
+        train_average_intensity_for_CTBMD_list = [[], [], [], []]
+        dxabmd_list = [[], [], [], []]
+        ctbmd_list = [[], [], [], []]
+
+        all_train_average_intensity_for_DXABMD_list = []
+        all_train_average_intensity_for_CTBMD_list = []
+        all_dxabmd_list = []
+        all_ctbmd_list = []
         for data in train_iterator:
             train_xps = data["xp"].to(self.device)
             train_dxa_bmd = data["DXABMD"]
@@ -786,12 +793,12 @@ class BMDGANModelInference(InferenceModelInt):
                     train_average_intensity_for_DXABMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
                     train_average_intensity_for_CTBMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
-                dxabmd_list[4].append(train_dxa_bmd[i][4])
-                ctbmd_list[4].append(
+                all_dxabmd_list.append(train_dxa_bmd[i][4])
+                all_ctbmd_list.append(
                     self._calc_average_intensity_with_mask(gt_drr_with_mask[:4], gt_drr_with_mask[4:]))
-                train_average_intensity_for_DXABMD_list[4].append(
+                all_train_average_intensity_for_DXABMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
-                train_average_intensity_for_CTBMD_list[4].append(
+                all_train_average_intensity_for_CTBMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
         df_dict = {}
         all_dict = {}
@@ -806,9 +813,9 @@ class BMDGANModelInference(InferenceModelInt):
             inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[i])
             pred_dxabmd_list_L1 = None
             pred_ctbmd_list_L1 = None
-            if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[i]):
+            if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[0]):
                 pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-            if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[i]):
+            if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
                 pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
 
             deg = 1
@@ -836,18 +843,18 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
-        dxabmd_list_L1 = np.array(dxabmd_list[4])  # (N,)
-        ctbmd_list_L1 = np.array(ctbmd_list[4])  # (N,)
-        train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[4])  # (N,)
-        train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[4])  # (N,)
+        dxabmd_list_L1 = np.array(all_dxabmd_list)  # (N,)
+        ctbmd_list_L1 = np.array(all_ctbmd_list)  # (N,)
+        train_average_intensity_for_DXABMD_list_L1 = np.array(all_train_average_intensity_for_DXABMD_list)  # (N,)
+        train_average_intensity_for_CTBMD_list_L1 = np.array(all_train_average_intensity_for_CTBMD_list)  # (N,)
 
-        inference_average_intensity_for_DXABMD_list_L1 = np.array(inference_average_intensity_for_DXABMD_list[4])
-        inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[4])
+        inference_average_intensity_for_DXABMD_list_L1 = np.array(all_inference_average_intensity_for_DXABMD_list)
+        inference_average_intensity_for_CTBMD_list_L1 = np.array(all_inference_average_intensity_for_CTBMD_list)
         pred_dxabmd_list_L1 = None
         pred_ctbmd_list_L1 = None
-        if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[4]):
+        if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[0]):
             pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-        if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[4]):
+        if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
             pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
 
         deg = 1
@@ -862,7 +869,6 @@ class BMDGANModelInference(InferenceModelInt):
             p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
             for k in range(deg + 1):
                 pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
-
 
         all_dict.update({"case_name": inference_case_names[0]})
         all_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})

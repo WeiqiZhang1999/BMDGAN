@@ -811,7 +811,7 @@ class BMDGANModelInference(InferenceModelInt):
                     pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
 
             if i == 0:
-                df_dict.update({"case_name": inference_case_names})
+                df_dict.update({"case_name": inference_case_names[0]})
                 df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})

@@ -823,7 +823,7 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
         df = pd.DataFrame(df_dict)
-        save_path = OSHelper.path_join(output_dir, f"calibrated_bmd.csv")
+        save_path = OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx")
         df.to_excel(save_path)
 
     @staticmethod

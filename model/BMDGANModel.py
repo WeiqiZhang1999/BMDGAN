@@ -794,6 +794,7 @@ class BMDGANModelInference(InferenceModelInt):
                 train_average_intensity_for_CTBMD_list[4].append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
         df_dict = {}
+        all_dict = {}
 
         for i in range(5):
             dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
@@ -830,10 +831,11 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
             elif i == 4:
-                df_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
-                df_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
-                df_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
-                df_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+                all_dict.update({"case_name": inference_case_names[0]})
+                all_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})
+                all_dict.update({f"All_pred_CTBMD": pred_ctbmd_list_L1})
+                all_dict.update({f"All_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+                all_dict.update({f"All_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
             else:
                 df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
                 df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
@@ -841,8 +843,9 @@ class BMDGANModelInference(InferenceModelInt):
                 df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
         df = pd.DataFrame(df_dict)
-        save_path = OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx")
-        df.to_excel(save_path)
+        df.to_excel(OSHelper.path_join(output_dir, f"calibrated_bmd.xlsx"))
+        all_df = pd.DataFrame(df_dict)
+        all_df.to_excel(OSHelper.path_join(output_dir, f"all_calibrated_bmd.xlsx"))
 
     @staticmethod
     def _calc_average_intensity_with_meanTH(image: np.ndarray | torch.Tensor) -> float | np.ndarray | torch.Tensor:

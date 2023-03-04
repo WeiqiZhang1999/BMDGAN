@@ -670,7 +670,8 @@ class BMDGANModelInference(InferenceModelInt):
 
     def __init__(self,
                  netG_enc_config,
-                 netG_up_config,):
+                 netG_up_config,
+                 view):
 
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
@@ -684,6 +685,18 @@ class BMDGANModelInference(InferenceModelInt):
         self.netG_up = ImportHelper.get_class(netG_up_config["class"])
         netG_up_config.pop("class")
         self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+
+        assert view == 'AP' or view == 'LAT', view
+        if view == 'AP':
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 48319.90625
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
+        else:
+                self.MIN_VAL_DXA_DRR_2k = 0.
+                self.MAX_VAL_DXA_DRR_2k = 51901.91796875
+                self.MIN_VAL_DXA_MASK_DRR_2k = 0.
+                self.MAX_VAL_DXA_MASK_DRR_2k = 88.125
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
         for signature in ["netG_up", "netG_fus", "netG_enc"]:
@@ -725,6 +738,9 @@ class BMDGANModelInference(InferenceModelInt):
                                       fake_drr_with_mask,
                                       space,
                                       compress=True)
+
+                fake_drr_with_mask = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                fake_drr_with_mask = np.clip(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                 for j in range(4):
                     inference_average_intensity_for_DXABMD_list[j].append(
                         self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
@@ -753,6 +769,11 @@ class BMDGANModelInference(InferenceModelInt):
             for i in range(B):
                 fake_drr_with_mask = train_fake_drrs[i]  # (8, H, W)
                 gt_drr_with_mask = train_drrs[i]
+                fake_drr_with_mask = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                fake_drr_with_mask = np.clip(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                gt_drr_with_mask = ImageHelper.denormal(gt_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                gt_drr_with_mask = np.clip(gt_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+
                 for j in range(4):
                     dxabmd_list[j].append(train_dxa_bmd[i][j])
                     ctbmd_list[j].append(self._calc_average_intensity_with_mask(gt_drr_with_mask[j], gt_drr_with_mask[j + 4]))

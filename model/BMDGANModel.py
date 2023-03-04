@@ -760,7 +760,7 @@ class BMDGANModelInference(InferenceModelInt):
         ctbmd_list = [[], [], [], []]
         for data in train_iterator:
             train_xps = data["xp"].to(self.device)
-            train_dxa_bmd = data["DXABMD"].cpu().numpy()
+            train_dxa_bmd = data["DXABMD"]
             train_drrs = data["drr"].numpy()
             train_fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(train_xps))).cpu().numpy()
 

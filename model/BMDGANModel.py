@@ -844,7 +844,7 @@ class BMDGANModelInference(InferenceModelInt):
                     for k in range(deg + 1):
                         pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
                     if deg == 1:
-                        np.save(str(OSHelper.path_join(output_dir, f"L{i + 1}_p_dxabmd")), p_ctbmd)
+                        np.save(str(OSHelper.path_join(output_dir, f"L{i + 1}_p_ctbmd")), p_ctbmd)
 
             if i == 0:
                 df_dict.update({"case_name": inference_case_names})

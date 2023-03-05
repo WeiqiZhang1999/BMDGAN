@@ -750,10 +750,11 @@ class BMDGANModelInference(InferenceModelInt):
                     inference_average_intensity_for_CTBMD_list[j].append(
                         self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
 
+                no_cali_cta_bmd_infer = self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4])
                 all_inference_average_intensity_for_DXABMD_list.append(
-                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                    no_cali_cta_bmd_infer)
                 all_inference_average_intensity_for_CTBMD_list.append(
-                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                    no_cali_cta_bmd_infer)
 
         # debug
         print(all_inference_average_intensity_for_DXABMD_list)

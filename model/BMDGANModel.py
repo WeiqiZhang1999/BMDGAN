@@ -801,10 +801,12 @@ class BMDGANModelInference(InferenceModelInt):
                 all_dxabmd_list.append(train_dxa_bmd[i][4])
                 all_ctbmd_list.append(
                     self._calc_average_intensity_with_mask(gt_drr_with_mask[:4], gt_drr_with_mask[4:]))
+
+                no_cali_cta_bmd = self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4])
                 all_train_average_intensity_for_DXABMD_list.append(
-                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                    no_cali_cta_bmd)
                 all_train_average_intensity_for_CTBMD_list.append(
-                    self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+                    no_cali_cta_bmd)
 
         print(all_dxabmd_list)
         print(all_ctbmd_list)

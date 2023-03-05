@@ -755,6 +755,10 @@ class BMDGANModelInference(InferenceModelInt):
                 all_inference_average_intensity_for_CTBMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
 
+        # debug
+        print(all_inference_average_intensity_for_DXABMD_list)
+        print(all_inference_average_intensity_for_CTBMD_list)
+
         assert data_module.training_dataloader is not None
         train_iterator = data_module.training_dataloader
         if self.rank == 0:
@@ -801,53 +805,60 @@ class BMDGANModelInference(InferenceModelInt):
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
                 all_train_average_intensity_for_CTBMD_list.append(
                     self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4]))
+
+        print(all_dxabmd_list)
+        print(all_ctbmd_list)
+        print(all_train_average_intensity_for_DXABMD_list)
+        print(all_train_average_intensity_for_CTBMD_list)
         df_dict = {}
-        all_dict = {}
 
-        for i in range(4):
-            dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
-            ctbmd_list_L1 = np.array(ctbmd_list[i]) # (N,)
-            train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
-            train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[i])  # (N,)
-
-            inference_average_intensity_for_DXABMD_list_L1 = np.array(inference_average_intensity_for_DXABMD_list[i])
-            inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[i])
-            pred_dxabmd_list_L1 = None
-            pred_ctbmd_list_L1 = None
-            if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[0]):
-                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-            if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
-                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
-
-            deg = 1
-            if pred_dxabmd_list_L1 is None:
-                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-                p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
-                for k in range(deg + 1):
-                    pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
-
-            if pred_ctbmd_list_L1 is None:
-                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
-                p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
-                for k in range(deg + 1):
-                    pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
-
-            if i == 0:
-                df_dict.update({"case_name": inference_case_names})
-                df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
-                df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
-                df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
-                df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
-            else:
-                df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
-                df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
-                df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
-                df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+        # for i in range(4):
+        #     dxabmd_list_L1 = np.array(dxabmd_list[i])  # (N,)
+        #     ctbmd_list_L1 = np.array(ctbmd_list[i]) # (N,)
+        #     train_average_intensity_for_DXABMD_list_L1 = np.array(train_average_intensity_for_DXABMD_list[i])  # (N,)
+        #     train_average_intensity_for_CTBMD_list_L1 = np.array(train_average_intensity_for_CTBMD_list[i])  # (N,)
+        #
+        #     inference_average_intensity_for_DXABMD_list_L1 = np.array(inference_average_intensity_for_DXABMD_list[i])
+        #     inference_average_intensity_for_CTBMD_list_L1 = np.array(inference_average_intensity_for_CTBMD_list[i])
+        #     pred_dxabmd_list_L1 = None
+        #     pred_ctbmd_list_L1 = None
+        #     if np.all(train_average_intensity_for_DXABMD_list_L1 == train_average_intensity_for_DXABMD_list_L1[0]):
+        #         pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+        #     if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
+        #         pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+        #
+        #     deg = 1
+        #     if pred_dxabmd_list_L1 is None:
+        #         pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+        #         p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
+        #         for k in range(deg + 1):
+        #             pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
+        #
+        #     if pred_ctbmd_list_L1 is None:
+        #         pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+        #         p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
+        #         for k in range(deg + 1):
+        #             pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
+        #
+        #     if i == 0:
+        #         df_dict.update({"case_name": inference_case_names})
+        #         df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
+        #     else:
+        #         df_dict.update({f"L{i + 1}_pred_DXABMD": pred_dxabmd_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_CTBMD": pred_ctbmd_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_ai_for_DXABMD": inference_average_intensity_for_DXABMD_list_L1})
+        #         df_dict.update({f"L{i + 1}_pred_ai_for_CTBMD": inference_average_intensity_for_CTBMD_list_L1})
 
         dxabmd_list_L1 = np.array(all_dxabmd_list)  # (N,)
         ctbmd_list_L1 = np.array(all_ctbmd_list)  # (N,)
         train_average_intensity_for_DXABMD_list_L1 = np.array(all_train_average_intensity_for_DXABMD_list)  # (N,)
         train_average_intensity_for_CTBMD_list_L1 = np.array(all_train_average_intensity_for_CTBMD_list)  # (N,)
+
+        print(dxabmd_list_L1)
+        print(ctbmd_list_L1)
 
         inference_average_intensity_for_DXABMD_list_L1 = np.array(all_inference_average_intensity_for_DXABMD_list)
         inference_average_intensity_for_CTBMD_list_L1 = np.array(all_inference_average_intensity_for_CTBMD_list)

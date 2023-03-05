@@ -686,7 +686,7 @@ class BMDGAN3ModelInference(InferenceModelInt):
 
         dxabmd_list_ALL = np.array(all_dxabmd_list)  # (N,)
         ctbmd_list_ALL = np.array(all_ctbmd_list)  # (N,)
-        print(ctbmd_list_ALL)
+
         train_average_intensity_for_DXABMD_list_ALL = np.array(all_train_average_intensity_for_DXABMD_list)  # (N,)
         train_average_intensity_for_CTBMD_list_ALL = np.array(all_train_average_intensity_for_CTBMD_list)  # (N,)
 

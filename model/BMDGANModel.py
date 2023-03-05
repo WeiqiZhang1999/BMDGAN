@@ -823,18 +823,18 @@ class BMDGANModelInference(InferenceModelInt):
             if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
                 pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
 
-            deg = 1
-            if pred_dxabmd_list_L1 is None:
-                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-                p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
-                for k in range(deg + 1):
-                    pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
+            for deg in [1, 2, 3]:
+                if pred_dxabmd_list_L1 is None:
+                    pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+                    p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
+                    for k in range(deg + 1):
+                        pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
 
-            if pred_ctbmd_list_L1 is None:
-                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
-                p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
-                for k in range(deg + 1):
-                    pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
+                if pred_ctbmd_list_L1 is None:
+                    pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+                    p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
+                    for k in range(deg + 1):
+                        pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
 
             if i == 0:
                 df_dict.update({"case_name": inference_case_names})
@@ -862,18 +862,18 @@ class BMDGANModelInference(InferenceModelInt):
         if np.all(train_average_intensity_for_CTBMD_list_L1 == train_average_intensity_for_CTBMD_list_L1[0]):
             pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
 
-        deg = 1
-        if pred_dxabmd_list_L1 is None:
-            pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
-            p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
-            for k in range(deg + 1):
-                pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
+        for deg in [1, 2, 3]:
+            if pred_dxabmd_list_L1 is None:
+                pred_dxabmd_list_L1 = np.zeros_like(inference_average_intensity_for_DXABMD_list_L1)
+                p_dxabmd = np.polyfit(train_average_intensity_for_DXABMD_list_L1, dxabmd_list_L1, deg)
+                for k in range(deg + 1):
+                    pred_dxabmd_list_L1 += p_dxabmd[k] * (inference_average_intensity_for_DXABMD_list_L1 ** (deg - k))
 
-        if pred_ctbmd_list_L1 is None:
-            pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
-            p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
-            for k in range(deg + 1):
-                pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
+            if pred_ctbmd_list_L1 is None:
+                pred_ctbmd_list_L1 = np.zeros_like(inference_average_intensity_for_CTBMD_list_L1)
+                p_ctbmd = np.polyfit(train_average_intensity_for_CTBMD_list_L1, ctbmd_list_L1, deg)
+                for k in range(deg + 1):
+                    pred_ctbmd_list_L1 += p_ctbmd[k] * (inference_average_intensity_for_CTBMD_list_L1 ** (deg - k))
 
         # all_dict.update({"case_name": inference_case_names})
         df_dict.update({f"All_pred_DXABMD": pred_dxabmd_list_L1})

@@ -745,10 +745,11 @@ class BMDGANModelInference(InferenceModelInt):
                 fake_drr_with_mask_denormaled = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                 fake_drr_with_mask_denormaled = np.clip(fake_drr_with_mask_denormaled, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                 for j in range(4):
+                    no_cali_cta_bmd_infer_per = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[j])
                     inference_average_intensity_for_DXABMD_list[j].append(
-                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[j]))
+                        no_cali_cta_bmd_infer_per)
                     inference_average_intensity_for_CTBMD_list[j].append(
-                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[j]))
+                        no_cali_cta_bmd_infer_per)
 
                 no_cali_cta_bmd_infer = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[:4])
                 all_inference_average_intensity_for_DXABMD_list.append(
@@ -793,8 +794,9 @@ class BMDGANModelInference(InferenceModelInt):
                 for j in range(4):
                     dxabmd_list[j].append(train_dxa_bmd[i][j])
                     ctbmd_list[j].append(self._calc_average_intensity_with_mask(gt_drr_with_mask_train[j], gt_drr_with_mask_train[j + 4]))
-                    train_average_intensity_for_DXABMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled_train[j]))
-                    train_average_intensity_for_CTBMD_list[j].append(self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled_train[j]))
+                    no_cali_cta_bmd_per = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled_train[j])
+                    train_average_intensity_for_DXABMD_list[j].append(no_cali_cta_bmd_per)
+                    train_average_intensity_for_CTBMD_list[j].append(no_cali_cta_bmd_per)
 
                 all_dxabmd_list.append(train_dxa_bmd[i][4])
                 all_ctbmd_list.append(

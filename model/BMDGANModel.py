@@ -788,19 +788,23 @@ class BMDGANModelInference(InferenceModelInt):
                 gt_drr_with_mask = train_drrs[i]
                 fake_drr_with_mask_denormaled_train = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                 fake_drr_with_mask_denormaled_train = np.clip(fake_drr_with_mask_denormaled_train, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                gt_drr_with_mask_train = ImageHelper.denormal(gt_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                gt_drr_with_mask_train = np.clip(gt_drr_with_mask_train, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+
+                gt_drr_train = ImageHelper.denormal(gt_drr_with_mask[:4], self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                gt_drr_train = np.clip(gt_drr_train, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+
+                gt_mask_train = ImageHelper.denormal(gt_drr_with_mask[4:], self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
+                gt_mask_train = np.clip(gt_mask_train, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
 
                 for j in range(4):
                     dxabmd_list[j].append(train_dxa_bmd[i][j])
-                    ctbmd_list[j].append(self._calc_average_intensity_with_mask(gt_drr_with_mask_train[j], gt_drr_with_mask_train[j + 4]))
+                    ctbmd_list[j].append(self._calc_average_intensity_with_mask(gt_drr_train[j], gt_mask_train[j]))
                     no_cali_cta_bmd_per = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled_train[j])
                     train_average_intensity_for_DXABMD_list[j].append(no_cali_cta_bmd_per)
                     train_average_intensity_for_CTBMD_list[j].append(no_cali_cta_bmd_per)
 
                 all_dxabmd_list.append(train_dxa_bmd[i][4])
                 all_ctbmd_list.append(
-                    self._calc_average_intensity_with_mask(gt_drr_with_mask_train[:4], gt_drr_with_mask_train[4:]))
+                    self._calc_average_intensity_with_mask(gt_drr_train, gt_mask_train))
 
                 no_cali_cta_bmd = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled_train[:4])
                 all_train_average_intensity_for_DXABMD_list.append(

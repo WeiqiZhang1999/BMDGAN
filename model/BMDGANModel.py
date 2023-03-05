@@ -742,15 +742,15 @@ class BMDGANModelInference(InferenceModelInt):
                                       space,
                                       compress=True)
 
-                fake_drr_with_mask = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                fake_drr_with_mask = np.clip(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                fake_drr_with_mask_denormaled = ImageHelper.denormal(fake_drr_with_mask, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
+                fake_drr_with_mask_denormaled = np.clip(fake_drr_with_mask_denormaled, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
                 for j in range(4):
                     inference_average_intensity_for_DXABMD_list[j].append(
-                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
+                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[j]))
                     inference_average_intensity_for_CTBMD_list[j].append(
-                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask[j]))
+                        self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[j]))
 
-                no_cali_cta_bmd_infer = self._calc_average_intensity_with_meanTH(fake_drr_with_mask[:4])
+                no_cali_cta_bmd_infer = self._calc_average_intensity_with_meanTH(fake_drr_with_mask_denormaled[:4])
                 all_inference_average_intensity_for_DXABMD_list.append(
                     no_cali_cta_bmd_infer)
                 all_inference_average_intensity_for_CTBMD_list.append(

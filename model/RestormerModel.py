@@ -46,7 +46,7 @@ class RestormerModel(TrainingModelInt):
                  lambda_GC=1.,
                  log_pcc=False,
                  pretrain_stage=False,
-                 mode="normal"
+                 # mode="normal"
                  ):
 
         self.rank = DDPHelper.rank()
@@ -55,20 +55,10 @@ class RestormerModel(TrainingModelInt):
         self.pretrain_stage = pretrain_stage
 
         # Prepare models
-        if mode == "normal":
-            self.netG = Restormer(**netG_config).to(self.device)
-        elif mode == "scca":
-            self.netG = SCCARestormer(**netG_config).to(self.device)
-        elif mode == "dpn":
-            self.netG = DPNRestormer(**netG_config).to(self.device)
-        elif mode == "new":
-            self.netG = NewRestormer(**netG_config).to(self.device)
-        elif mode == "sota":
-            self.netG = Restormer2(**netG_config).to(self.device)
-        else:
-            raise NotImplementedError
+        self.netG = Restormer(**netG_config).to(self.device)
+
         self.optimizer_config = optimizer_config
-        self.netD = MultiscaleDiscriminator(input_nc=9).to(self.device)
+        self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
 
         if self.rank == 0:
@@ -89,18 +79,6 @@ class RestormerModel(TrainingModelInt):
             self.crit_GC = GradientCorrelationLoss2D(grad_method="sobel").to(self.device)
 
         self.log_bmd_pcc = log_pcc
-
-        if self.pretrain_stage:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 105194.375
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 109.375
-        else:
-            self.MIN_VAL_DXA_DRR_2k = 0.
-            self.MAX_VAL_DXA_DRR_2k = 36.74824
-            self.MIN_VAL_DXA_MASK_DRR_2k = 0.
-            self.MAX_VAL_DXA_MASK_DRR_2k = 91.80859
-
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -142,15 +120,7 @@ class RestormerModel(TrainingModelInt):
             G_loss += fm_loss * self.lambda_FM
 
         if self.lambda_GC > 0.:
-            gc_loss = torch.tensor(0, dtype=torch.float32, device=self.device)
-            for i in [0, 1, 2, 3]:
-                drr0 = drr[:, i, :, :].unsqueeze(1)
-                fake_drr0 = fake_drr[:, i, :, :].unsqueeze(1)
-                drr1 = drr[:, i + 4, :, :].unsqueeze(1)
-                fake_drr1 = fake_drr[:, i + 4, :, :].unsqueeze(1)
-                gc_loss_1 = self.crit_GC(drr0, fake_drr0) * 0.125
-                gc_loss_2 = self.crit_GC(drr1, fake_drr1) * 0.125
-                gc_loss += gc_loss_1 + gc_loss_2
+            gc_loss = self.crit_GC(drr, fake_drr)
             log["G_GC"] = gc_loss.detach()
             G_loss += gc_loss * self.lambda_GC
 
@@ -186,35 +156,6 @@ class RestormerModel(TrainingModelInt):
         total_count = 0.
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
-        psnr1 = torch.tensor([0.]).to(self.device)
-        ssim1 = torch.tensor([0.]).to(self.device)
-        psnr2 = torch.tensor([0.]).to(self.device)
-        ssim2 = torch.tensor([0.]).to(self.device)
-        psnr3 = torch.tensor([0.]).to(self.device)
-        ssim3 = torch.tensor([0.]).to(self.device)
-        psnr4 = torch.tensor([0.]).to(self.device)
-        ssim4 = torch.tensor([0.]).to(self.device)
-        psnr5 = torch.tensor([0.]).to(self.device)
-        ssim5 = torch.tensor([0.]).to(self.device)
-        psnr6 = torch.tensor([0.]).to(self.device)
-        ssim6 = torch.tensor([0.]).to(self.device)
-        psnr7 = torch.tensor([0.]).to(self.device)
-        ssim7 = torch.tensor([0.]).to(self.device)
-        psnr8 = torch.tensor([0.]).to(self.device)
-        ssim8 = torch.tensor([0.]).to(self.device)
-        if self.log_bmd_pcc:
-            pcc_l1 = torch.tensor([0.]).to(self.device)
-            pcc_l2 = torch.tensor([0.]).to(self.device)
-            pcc_l3 = torch.tensor([0.]).to(self.device)
-            pcc_l4 = torch.tensor([0.]).to(self.device)
-            inference_ai_list_L1 = []
-            gt_bmds_L1 = []
-            inference_ai_list_L2 = []
-            gt_bmds_L2 = []
-            inference_ai_list_L3 = []
-            gt_bmds_L3 = []
-            inference_ai_list_L4 = []
-            gt_bmds_L4 = []
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -238,88 +179,6 @@ class RestormerModel(TrainingModelInt):
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
 
-            for i in [0, 1, 2, 3, 4, 5, 6, 7]:
-                if i == 0:
-                    psnr1 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim1 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 1:
-                    psnr2 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim2 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 2:
-                    psnr3 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim3 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 3:
-                    psnr4 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim4 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 4:
-                    psnr5 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim5 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 5:
-                    psnr6 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim6 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 6:
-                    psnr7 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim7 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-                elif i == 7:
-                    psnr8 += peak_signal_noise_ratio(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                    reduction=None, dim=(1, 2, 3), data_range=255.).sum()
-                    ssim8 += structural_similarity_index_measure(fake_drrs_[:, i, :, :].unsqueeze(1), drrs_[:, i, :, :].unsqueeze(1),
-                                                                reduction=None, data_range=255.).sum()
-
-            if self.log_bmd_pcc:
-                for i in [0, 1, 2, 3]:
-                    gt_drrs_ = drrs[:, i, :, :].unsqueeze(1)
-                    gt_masks_ = drrs[:, i + 4, :, :].unsqueeze(1)
-                    gt_drrs_ = ImageHelper.denormal(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                    gt_drrs_ = torch.clamp(gt_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                    gt_masks_ = ImageHelper.denormal(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
-                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
-                    gt_masks_ = torch.clamp(gt_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
-
-                    fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
-                    fake_masks_ = fake_drrs[:, i + 4, :, :].unsqueeze(1)
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_2k, self.MAX_VAL_DXA_DRR_2k)
-                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k,
-                                                       self.MAX_VAL_DXA_MASK_DRR_2k)
-                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_2k, self.MAX_VAL_DXA_MASK_DRR_2k)
-                    for j in range(B):
-                        space = spaces[j][1] * spaces[j][2]
-                        if i == 0:
-                            inference_ai_list_L1.append(
-                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
-                            gt_bmds_L1.append(
-                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-                        elif i == 1:
-                            inference_ai_list_L2.append(
-                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
-                            gt_bmds_L2.append(
-                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-                        elif i == 2:
-                            inference_ai_list_L3.append(
-                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
-                            gt_bmds_L3.append(
-                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-                        else:
-                            inference_ai_list_L4.append(
-                                self._calc_average_intensity_with_mask(fake_drrs_[j], fake_masks_[j], space))
-                            gt_bmds_L4.append(
-                                self._calc_average_intensity_with_mask(gt_drrs_[j], gt_masks_[j], space))
-
             total_count += B
 
         psnr /= total_count
@@ -330,101 +189,8 @@ class RestormerModel(TrainingModelInt):
 
 
 
-        ret = {"PSNR_all": psnr.cpu().numpy(),
-               "SSIM_all": ssim.cpu().numpy()}
-
-        psnr1 /= total_count
-        ssim1 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr1, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim1, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L1_DRR"] = psnr1.cpu().numpy()
-        ret["SSIM_L1_DRR"] = ssim1.cpu().numpy()
-
-        psnr2 /= total_count
-        ssim2 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr2, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim2, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L2_DRR"] = psnr2.cpu().numpy()
-        ret["SSIM_L2_DRR"] = ssim2.cpu().numpy()
-
-        psnr3 /= total_count
-        ssim3 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr3, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim3, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L3_DRR"] = psnr3.cpu().numpy()
-        ret["SSIM_L3_DRR"] = ssim3.cpu().numpy()
-
-        psnr4 /= total_count
-        ssim4 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr4, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim4, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L4_DRR"] = psnr4.cpu().numpy()
-        ret["SSIM_L4_DRR"] = ssim4.cpu().numpy()
-
-        psnr5 /= total_count
-        ssim5 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr5, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim5, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L1_Mask_DRR"] = psnr5.cpu().numpy()
-        ret["SSIM_L1_Mask_DRR"] = ssim5.cpu().numpy()
-
-        psnr6 /= total_count
-        ssim6 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr6, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim6, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L2_Mask_DRR"] = psnr6.cpu().numpy()
-        ret["SSIM_L2_Mask_DRR"] = ssim6.cpu().numpy()
-
-        psnr7 /= total_count
-        ssim7 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr7, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim7, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L3_Mask_DRR"] = psnr7.cpu().numpy()
-        ret["SSIM_L3_Mask_DRR"] = ssim7.cpu().numpy()
-
-        psnr8 /= total_count
-        ssim8 /= total_count
-        if DDPHelper.is_initialized():
-            DDPHelper.all_reduce(psnr8, DDPHelper.ReduceOp.AVG)
-            DDPHelper.all_reduce(ssim8, DDPHelper.ReduceOp.AVG)
-        ret["PSNR_L4_Mask_DRR"] = psnr8.cpu().numpy()
-        ret["SSIM_L4_Mask_DRR"] = ssim8.cpu().numpy()
-
-        if self.log_bmd_pcc:
-            inference_ai_list_L1 = torch.Tensor(inference_ai_list_L1).view(-1).cpu().numpy()
-            gt_bmds_L1 = torch.Tensor(gt_bmds_L1).view(-1).cpu().numpy()
-            pcc_l1 += pearsonr(gt_bmds_L1, inference_ai_list_L1)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc_l1, DDPHelper.ReduceOp.AVG)
-            ret["L1_Intensity_PCC"] = pcc_l1
-
-            inference_ai_list_L2 = torch.Tensor(inference_ai_list_L2).view(-1).cpu().numpy()
-            gt_bmds_L2 = torch.Tensor(gt_bmds_L2).view(-1).cpu().numpy()
-            pcc_l2 += pearsonr(gt_bmds_L2, inference_ai_list_L2)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc_l2, DDPHelper.ReduceOp.AVG)
-            ret["L2_Intensity_PCC"] = pcc_l2
-
-            inference_ai_list_L3 = torch.Tensor(inference_ai_list_L3).view(-1).cpu().numpy()
-            gt_bmds_L3 = torch.Tensor(gt_bmds_L3).view(-1).cpu().numpy()
-            pcc_l3 += pearsonr(gt_bmds_L3, inference_ai_list_L3)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc_l3, DDPHelper.ReduceOp.AVG)
-            ret["L3_Intensity_PCC"] = pcc_l3
-
-            inference_ai_list_L4 = torch.Tensor(inference_ai_list_L4).view(-1).cpu().numpy()
-            gt_bmds_L4 = torch.Tensor(gt_bmds_L4).view(-1).cpu().numpy()
-            pcc_l4 += pearsonr(gt_bmds_L4, inference_ai_list_L4)[0]
-            if DDPHelper.is_initialized():
-                DDPHelper.all_reduce(pcc_l4, DDPHelper.ReduceOp.AVG)
-            ret["L4_Intensity_PCC"] = pcc_l4
+        ret = {"PSNR": psnr.cpu().numpy(),
+               "SSIM": ssim.cpu().numpy()}
 
         return ret
 
@@ -435,18 +201,9 @@ class RestormerModel(TrainingModelInt):
         fake_drrs = self.netG(xps)
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
 
-        ret = {"Xray": xps}
-        for i in [0, 1, 2, 3]:
-            drrs_ = drrs[:, i, :, :].unsqueeze(1)
-            masks = drrs[:, i + 4, :, :].unsqueeze(1)
-            fake_drrs_ = fake_drrs[:, i, :, :].unsqueeze(1)
-            fake_masks = fake_drrs[:, i + 4, :, :].unsqueeze(1)
-
-            bone_level = i + 1
-            ret.update({f"L{bone_level}_DRR": drrs_})
-            ret.update({f"L{bone_level}_Mask_DRR": masks})
-            ret.update({f"L{bone_level}_Fake_DRR": fake_drrs_})
-            ret.update({f"L{bone_level}_Fake_Mask_DRR": fake_masks})
+        ret = {"Xray": xps,
+               "DRR": drrs,
+               "Fake_DRR": fake_drrs}
 
         for key, val in ret.items():
             for i in range(val.shape[0]):
@@ -457,19 +214,12 @@ class RestormerModel(TrainingModelInt):
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
         # if resume:
         #     assert strict == True
-        if self.cycle_training:
-            force_strict = False
-            for signature in ["netG", "netD"]:
-                net = getattr(self, signature)
-                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_netG.pt"))
-                TorchHelper.load_network_by_path(net.module, load_path, strict=force_strict)
-                logging.info(f"Model {signature} loaded from {load_path}")
-        else:
-            for signature in ["netG", "netD"]:
-                net = getattr(self, signature)
-                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
-                logging.info(f"Model {signature} loaded from {load_path}")
+
+        for signature in ["netG", "netD"]:
+            net = getattr(self, signature)
+            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+            TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+            logging.info(f"Model {signature} loaded from {load_path}")
 
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):
@@ -495,30 +245,6 @@ class RestormerModel(TrainingModelInt):
 
     def get_optimizers(self):
         return [self.netG_optimizer, self.netD_optimizer]
-
-    @staticmethod
-    def _calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
-                                        threshold: int | float) -> float | np.ndarray | torch.Tensor:
-        mask = image >= threshold
-        area = mask.sum()
-        if area <= 0.:
-            if isinstance(image, torch.Tensor):
-                return torch.tensor(0, dtype=image.dtype, device=image.device)
-            return 0.
-        numerator = (image * mask).sum()
-        return numerator / area
-
-    @staticmethod
-    def _calc_average_intensity_with_mask(image: np.ndarray | torch.Tensor, mask: np.ndarray | torch.Tensor, space: np.ndarray | torch.Tensor
-                                         ) -> float | np.ndarray | torch.Tensor:
-        area = (mask * space).sum()
-        if area <= 0.:
-            if isinstance(image, torch.Tensor):
-                return torch.tensor(0, dtype=image.dtype, device=image.device)
-            return 0.
-        numerator = image.sum()
-        return numerator / area
-
 
 
 class RestomerModelInference(InferenceModelInt):

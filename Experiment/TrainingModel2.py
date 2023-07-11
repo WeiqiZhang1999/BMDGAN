@@ -72,14 +72,14 @@ class TrainingModel(BaseExperiment):
         self.__resume = resume
         self.__model_name = model_name
 
-        if self.__model_name.split('_')[-1] == '2':
-            self._tb_path = OSHelper.path_join(
-                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\finetuneROI"),
-                "logs")
-        else:
-            self._tb_path = OSHelper.path_join(
-                OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain3"),
-                "logs")
+        # if self.__model_name.split('_')[-1] == '2':
+        #     self._tb_path = OSHelper.path_join(
+        #         OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\finetuneROI"),
+        #         "logs")
+        # else:
+        #     self._tb_path = OSHelper.path_join(
+        #         OSHelper.format_path(r"/win/salmon\user\zhangwq\BMD_projects\workspace\pretrain3"),
+        #         "logs")
 
         self._output_dir = OSHelper.path_join(self._output_dir, str(self._split_fold))
         if OSHelper.path_exists(OSHelper.path_join(self._output_dir, "ckp_state.pt")):
@@ -148,8 +148,10 @@ class TrainingModel(BaseExperiment):
 
         first_epoch = True
         if rank == 0:
-            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self.__model_name), str(self._split_fold))))
+            # tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self.__model_name), str(self._split_fold))))
             # tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._tb_path, str(self._split_fold))))
+            tb_writer = SummaryWriter(log_dir=str(OSHelper.path_join(self._output_dir, "tb_log")))
+
         while True:
             if self.__scheduler_config["policy"] != "infinite":
                 if epoch == self.__n_epoch + 1:

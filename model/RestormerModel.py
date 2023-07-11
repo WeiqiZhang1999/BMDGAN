@@ -164,7 +164,6 @@ class RestormerModel(TrainingModelInt):
 
         return G_loss, D_loss, log
 
-
     def train_batch(self, data, batch_id, epoch):
         g_loss, d_loss, log = self.__compute_loss(data)
 

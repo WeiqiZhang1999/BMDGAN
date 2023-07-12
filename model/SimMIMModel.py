@@ -63,12 +63,12 @@ class RestormerModel(TrainingModelInt):
 
 
         if self.rank == 0:
-            self.netG.apply(weights_init)
+            # self.netG.apply(weights_init)
             self.model.apply(weights_init)
 
         # Wrap DDP
-        self.netG = DDPHelper.shell_ddp(self.netG)
-        self.netD = DDPHelper.shell_ddp(self.model)
+        # self.netG = DDPHelper.shell_ddp(self.netG)
+        self.model = DDPHelper.shell_ddp(self.model)
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])

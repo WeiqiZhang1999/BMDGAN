@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2/12/2023 11:56 PM
 # @Author  : ZHANG WEIQI
-# @File    : MAE.py
+# @File    : ViT.py
 # @Software: PyCharm
 
 #!/usr/bin/env python

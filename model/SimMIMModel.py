@@ -59,7 +59,7 @@ class RestormerModel(TrainingModelInt):
         self.netG = Restormer(**netG_config).to(self.device)
 
         self.optimizer_config = optimizer_config
-        self.model = SimMIM(encoder=self.netG, masking_ratio=0.5)
+        self.model = SimMIM(encoder=self.netG, masking_ratio=0.5).to(self.device)
 
 
         if self.rank == 0:

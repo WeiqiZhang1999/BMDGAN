@@ -157,11 +157,11 @@ class RestormerModel(TrainingModelInt):
 
     def trigger_model(self, train: bool):
         if train:
-            for signature in ["netG", "model"]:
+            for signature in ["model"]:
                 net = getattr(self, signature)
                 net.module.train()
         else:
-            for signature in ["netG", "model"]:
+            for signature in ["model"]:
                 net = getattr(self, signature)
                 net.module.eval()
 

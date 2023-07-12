@@ -199,17 +199,23 @@ class Upsample(nn.Module):
 class Restormer(nn.Module):
     def __init__(self,
                  inp_channels=1,
-                 out_channels=2,
+                 out_channels=1,
                  dim=48,
                  num_blocks=[4, 6, 6, 8],
                  num_refinement_blocks=4,
                  heads=[1, 2, 4, 8],
                  ffn_expansion_factor=2.66,
                  bias=False,
+                 mae=False,
                  LayerNorm_type='WithBias',  ## Other option 'BiasFree'
                  ):
-
         super(Restormer, self).__init__()
+
+        if mae:
+            img_h, img_w = 256, 128
+            self.patch_size = 16
+            self.num_patches = img_h * img_w
+            self.pos_embedding = nn.Parameter(torch.randn(1, self.num_patches, dim))
 
         self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
 
@@ -254,12 +260,14 @@ class Restormer(nn.Module):
             TransformerBlock(dim=int(dim * 2 ** 1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_refinement_blocks)])
 
+        self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias,
+                                padding_mode="reflect")
 
-        self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias, padding_mode="reflect")
-
-    def forward(self, inp_img):
-
-        inp_enc_level1 = self.patch_embed(inp_img)
+    def forward(self, inp_img, pretrain=False):
+        if pretrain:
+            inp_enc_level1 = to_4d(inp_img, 256, 128)
+        else:
+            inp_enc_level1 = self.patch_embed(inp_img)
         out_enc_level1 = self.encoder_level1(inp_enc_level1)
 
         inp_enc_level2 = self.down1_2(out_enc_level1)
@@ -289,5 +297,140 @@ class Restormer(nn.Module):
 
         out_dec_level1 = self.output(out_dec_level1)
 
+        if pretrain:
+            return rearrange(out_dec_level1, 'b c h w -> b (h w) c', h=256, w=128)
+        else:
+            return out_dec_level1
+
+
+class RestormerEncoder(nn.Module):
+    def __init__(self,
+                 inp_channels=1,
+                 dim=48,
+                 num_blocks=[4, 6, 6, 8],
+                 num_refinement_blocks=4,
+                 heads=[1, 2, 4, 8],
+                 ffn_expansion_factor=2.66,
+                 bias=False,
+                 LayerNorm_type='WithBias',  ## Other option 'BiasFree'
+                 mae=True,
+                 ):
+
+        super(RestormerEncoder, self).__init__()
+        if mae:
+            img_h, img_w = 256, 128
+            self.patch_size = 16
+            self.num_patches = img_h * img_w
+            self.pos_embedding = nn.Parameter(torch.randn(1, self.num_patches, dim))
+
+        self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
+
+        self.encoder_level1 = nn.Sequential(*[
+            TransformerBlock(dim=dim, num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias,
+                             LayerNorm_type=LayerNorm_type) for i in range(num_blocks[0])])
+
+        self.down1_2 = Downsample(dim)  ## From Level 1 to Level 2
+        self.encoder_level2 = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 1), num_heads=heads[1], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[1])])
+
+        self.down2_3 = Downsample(int(dim * 2 ** 1))  ## From Level 2 to Level 3
+        self.encoder_level3 = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
+
+        self.down3_4 = Downsample(int(dim * 2 ** 2))  ## From Level 3 to Level 4
+        self.latent = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 3), num_heads=heads[3], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[3])])
+
+    def forward(self, inp_img, pretrain=False):
+        if pretrain:
+            inp_enc_level1 = to_4d(inp_img, 256, 128)
+        else:
+            inp_enc_level1 = self.patch_embed(inp_img)
+        out_enc_level1 = self.encoder_level1(inp_enc_level1)
+
+        inp_enc_level2 = self.down1_2(out_enc_level1)
+        out_enc_level2 = self.encoder_level2(inp_enc_level2)
+
+        inp_enc_level3 = self.down2_3(out_enc_level2)
+        out_enc_level3 = self.encoder_level3(inp_enc_level3)
+
+        inp_enc_level4 = self.down3_4(out_enc_level3)
+        latent = self.latent(inp_enc_level4)
+
+        if pretrain:
+            return rearrange(latent, 'b c h w -> b (h w) c', h=256, w=128)
+
+        else:
+            return [out_enc_level1, out_enc_level2, out_enc_level3, latent]
+
+
+class RestormerDecoder(nn.Module):
+    def __init__(self,
+                 out_channels=1,
+                 dim=48,
+                 num_blocks=[4, 6, 6, 8],
+                 num_refinement_blocks=4,
+                 heads=[1, 2, 4, 8],
+                 ffn_expansion_factor=2.66,
+                 bias=False,
+                 LayerNorm_type='WithBias',  ## Other option 'BiasFree'
+                 ):
+        super(RestormerDecoder, self).__init__()
+
+        self.up4_3 = Upsample(int(dim * 2 ** 3))  ## From Level 4 to Level 3
+        self.reduce_chan_level3 = nn.Conv2d(int(dim * 2 ** 3), int(dim * 2 ** 2), kernel_size=1, bias=bias)
+        self.decoder_level3 = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
+
+        self.up3_2 = Upsample(int(dim * 2 ** 2))  ## From Level 3 to Level 2
+        self.reduce_chan_level2 = nn.Conv2d(int(dim * 2 ** 2), int(dim * 2 ** 1), kernel_size=1, bias=bias)
+        self.decoder_level2 = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 1), num_heads=heads[1], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[1])])
+
+        self.up2_1 = Upsample(int(dim * 2 ** 1))  ## From Level 2 to Level 1  (NO 1x1 conv to reduce channels)
+
+        self.decoder_level1 = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[0])])
+
+        self.refinement = nn.Sequential(*[
+            TransformerBlock(dim=int(dim * 2 ** 1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_refinement_blocks)])
+
+        self.output = nn.Conv2d(int(dim * 2 ** 1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias,
+                                padding_mode="reflect")
+
+    def forward(self, inp_img_list):
+        inp_dec_level3 = self.up4_3(inp_img_list[3])  # [out_enc_level1, out_enc_level2, out_enc_level3, latent]
+        inp_dec_level3 = torch.cat([inp_dec_level3, inp_img_list[2]], 1)
+        inp_dec_level3 = self.reduce_chan_level3(inp_dec_level3)
+        out_dec_level3 = self.decoder_level3(inp_dec_level3)
+
+        inp_dec_level2 = self.up3_2(out_dec_level3)
+        inp_dec_level2 = torch.cat([inp_dec_level2, inp_img_list[1]], 1)
+        inp_dec_level2 = self.reduce_chan_level2(inp_dec_level2)
+        out_dec_level2 = self.decoder_level2(inp_dec_level2)
+
+        inp_dec_level1 = self.up2_1(out_dec_level2)
+        inp_dec_level1 = torch.cat([inp_dec_level1, inp_img_list[0]], 1)
+        out_dec_level1 = self.decoder_level1(inp_dec_level1)
+
+        out_dec_level1 = self.refinement(out_dec_level1)
+
+        out_dec_level1 = self.output(out_dec_level1)
+
         return out_dec_level1
 
+
+if __name__ == '__main__':
+    x = torch.randn(1, 1, 256, 128)
+    e = RestormerEncoder()
+    d = RestormerDecoder()
+    x1 = e(x)
+    y = d(x1)
+    print(y.shape)

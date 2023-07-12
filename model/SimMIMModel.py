@@ -63,8 +63,8 @@ class RestormerModel(TrainingModelInt):
 
 
         if self.rank == 0:
-            # self.netG.apply(weights_init)
-            self.model.apply(weights_init)
+            self.netG.apply(weights_init)
+            # self.model.apply(weights_init)
 
         # Wrap DDP
         # self.netG = DDPHelper.shell_ddp(self.netG)

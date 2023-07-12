@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     from Restormer import Restormer
 
-    v = Restormer()
+    v = Restormer(mae=True)
     mae = SimMIM(
         encoder=v,
         masking_ratio=0.5
@@ -115,3 +115,4 @@ if __name__ == '__main__':
     images = torch.randn(1, 1, 256, 128)
 
     loss = mae(images)
+    print(loss)

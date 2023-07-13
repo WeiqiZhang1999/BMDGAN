@@ -41,7 +41,7 @@ class BMDModel(TrainingModelInt):
                  log_pcc=False,
                  lumbar_data=False,
                  binary=False,
-                 cycle_training=False,
+                 self_sup=False,
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0
@@ -52,7 +52,7 @@ class BMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
         self.lumbar_data = lumbar_data
         self.binary = binary
-        self.cycle_training = cycle_training
+        self.self_sup = self_sup
 
         # Prepare models
         if self.lumbar_data and self.binary:
@@ -313,22 +313,18 @@ class BMDModel(TrainingModelInt):
     def load_model(self, load_dir: AnyStr, prefix="ckp", strict=True, resume=True):
         # if resume:
         #     assert strict == True
-        if self.cycle_training:
-            force_strict = False
-            for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
+        if self.self_sup:
+            for signature in ["netG_fus", "netG_enc"]:
                 net = getattr(self, signature)
                 load_path = str(OSHelper.path_join(load_dir, f"{prefix}_netG.pt"))
                 TorchHelper.load_network_by_path(net.module, load_path, strict=force_strict)
-                logging.info(f"Model {signature} loaded from {load_path}")
+                logging.info(f"Using self-supervised model\nModel {signature} loaded from {load_path}")
         else:
             for signature in ["netG_up", "netG_fus", "netG_enc", "netD"]:
-                try:
-                    net = getattr(self, signature)
-                    load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-                    TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
-                    logging.info(f"Model {signature} loaded from {load_path}")
-                except:
-                    logging.info(f"Do not load {signature}")
+                net = getattr(self, signature)
+                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+                TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
+                logging.info(f"Model {signature} loaded from {load_path}")
 
 
     def save_model(self, save_dir: AnyStr, prefix="ckp"):

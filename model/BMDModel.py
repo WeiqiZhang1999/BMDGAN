@@ -161,7 +161,7 @@ class BMDModel(TrainingModelInt):
             log["G_FM"] = fm_loss.detach()
             G_loss += fm_loss * self.lambda_FM
 
-        if self.lambda_GC > 0. and self.binary:
+        if self.binary:
             drr0 = drr[:, 0, :, :].unsqueeze(1)
             fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
             drr1 = drr[:, 1, :, :].unsqueeze(1)
@@ -450,10 +450,13 @@ class LumbarBMDModelInference(InferenceModelInt):
 
     def load_model(self, load_dir: AnyStr, prefix="ckp"):
         for signature in ["netG_up", "netG_fus", "netG_enc"]:
-            net = getattr(self, signature)
-            load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
-            TorchHelper.load_network_by_path(net, load_path, strict=True)
-            logging.info(f"Model {signature} loaded from {load_path}")
+            try:
+                net = getattr(self, signature)
+                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
+                TorchHelper.load_network_by_path(net, load_path, strict=True)
+                logging.info(f"Model {signature} loaded from {load_path}")
+            except:
+                pass
 
     @torch.no_grad()
     def inference_and_save(self, data_module: DataModule, output_dir: AnyStr):

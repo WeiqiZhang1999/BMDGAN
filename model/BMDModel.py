@@ -316,7 +316,7 @@ class BMDModel(TrainingModelInt):
         if self.self_sup:
             for signature in ["netG_fus", "netG_enc"]:
                 net = getattr(self, signature)
-                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_netG.pt"))
+                load_path = str(OSHelper.path_join(load_dir, f"{prefix}_{signature}.pt"))
                 TorchHelper.load_network_by_path(net.module, load_path, strict=strict)
                 logging.info(f"Using self-supervised model\nModel {signature} loaded from {load_path}")
         else:

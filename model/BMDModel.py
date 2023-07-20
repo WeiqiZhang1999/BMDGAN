@@ -39,8 +39,6 @@ class BMDModel(TrainingModelInt):
                  lambda_FM=10.,
                  lambda_GC=1.,
                  log_pcc=False,
-                 lumbar_data=False,
-                 binary=False,
                  self_sup=False,
                  # clip_grad=False,
                  # clip_max_norm=0.01,
@@ -50,39 +48,21 @@ class BMDModel(TrainingModelInt):
         self.rank = DDPHelper.rank()
         self.local_rank = DDPHelper.local_rank()
         self.device = torch.device(self.local_rank)
-        self.lumbar_data = lumbar_data
-        self.binary = binary
         self.self_sup = self_sup
 
-        # Prepare models
-        if self.lumbar_data and self.binary:
-            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-            self.optimizer_config = optimizer_config
-            # self.clip_grad = clip_grad
-            # self.clip_max_norm = clip_max_norm
-            # self.clip_norm_type = clip_norm_type
-            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                         output_nc=(64 * (2 ** 2)),
-                                                         norm_type="group",
-                                                         padding_type="reflect").to(self.device)
-            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-            netG_up_config.pop("class")
-            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-            self.netD = MultiscaleDiscriminator(input_nc=3).to(self.device)
-        else:
-            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-            self.optimizer_config = optimizer_config
-            # self.clip_grad = clip_grad
-            # self.clip_max_norm = clip_max_norm
-            # self.clip_norm_type = clip_norm_type
-            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                         output_nc=(64 * (2 ** 2)),
-                                                         norm_type="group",
-                                                         padding_type="reflect").to(self.device)
-            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-            netG_up_config.pop("class")
-            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
-            self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
+        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+        self.optimizer_config = optimizer_config
+        # self.clip_grad = clip_grad
+        # self.clip_max_norm = clip_max_norm
+        # self.clip_norm_type = clip_norm_type
+        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                     output_nc=(64 * (2 ** 2)),
+                                                     norm_type="group",
+                                                     padding_type="reflect").to(self.device)
+        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+        netG_up_config.pop("class")
+        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:
             self.netG_enc.apply(weights_init)
@@ -107,18 +87,9 @@ class BMDModel(TrainingModelInt):
 
         self.log_bmd_pcc = log_pcc
 
-        if self.lumbar_data:
-            self.MIN_VAL_DXA_DRR_43 = 0.
-            self.MAX_VAL_DXA_DRR_43 = 34.88827
-            self.THRESHOLD_DXA_BMD_43 = 1e-5
-            self.MIN_VAL_DXA_MASK_DRR_43 = 0.
-            self.MAX_VAL_DXA_MASK_DRR_43 = 86.04297
-        else:
-            self.MIN_VAL_DXA_DRR_315 = 0.
-            self.MAX_VAL_DXA_DRR_315 = 40398.234376
-            self.THRESHOLD_DXA_BMD_315 = 1591.5
-
-
+        self.MIN_VAL_DXA_DRR_315 = 0.
+        self.MAX_VAL_DXA_DRR_315 = 40398.234376
+        self.THRESHOLD_DXA_BMD_315 = 1591.5
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -161,19 +132,7 @@ class BMDModel(TrainingModelInt):
             log["G_FM"] = fm_loss.detach()
             G_loss += fm_loss * self.lambda_FM
 
-        if self.binary:
-            drr0 = drr[:, 0, :, :].unsqueeze(1)
-            fake_drr0 = fake_drr[:, 0, :, :].unsqueeze(1)
-            drr1 = drr[:, 1, :, :].unsqueeze(1)
-            fake_drr1 = fake_drr[:, 1, :, :].unsqueeze(1)
-            # print(drr0.shape)
-            # print(drr0.shape)
-            gc_loss_1 = self.crit_GC(drr0, fake_drr0)
-            gc_loss_2 = self.crit_GC(drr1, fake_drr1)
-            gc_loss = gc_loss_1 + gc_loss_2
-            log["G_GC"] = gc_loss.detach()
-            G_loss += gc_loss * self.lambda_GC
-        else:
+        if self.lambda_GC > 0.:
             gc_loss = self.crit_GC(drr, fake_drr)
             log["G_GC"] = gc_loss.detach()
             G_loss += gc_loss * self.lambda_GC
@@ -229,7 +188,6 @@ class BMDModel(TrainingModelInt):
             xps = data["xp"].to(self.device)
             B = xps.shape[0]
             drrs = data["drr"].to(self.device)
-            spaces = data["spacing"].to(self.device)
             fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
 
             drrs_ = ImageHelper.denormal(drrs)
@@ -241,27 +199,14 @@ class BMDModel(TrainingModelInt):
                                             reduction=None, dim=(1, 2, 3), data_range=255.).sum()
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
-            if self.log_bmd_pcc:
-                if self.binary:
-                    fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
-                    fake_masks_ = fake_drrs[:, 1, :, :].unsqueeze(1)
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_masks_ = ImageHelper.denormal(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
-                    fake_masks_ = torch.clamp(fake_masks_, self.MIN_VAL_DXA_MASK_DRR_43, self.MAX_VAL_DXA_MASK_DRR_43)
 
-                    for i in range(B):
-                        space = spaces[i][1] * spaces[i][2]
-                        inference_ai_list.append(
-                            self._calc_average_intensity_with_mask(fake_drrs_[i], fake_masks_[i], space))
-                    gt_bmds.append(data["CTBMD"].view(-1))
-                else:
-                    fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_43, self.MAX_VAL_DXA_DRR_43)
-                    for i in range(B):
-                        inference_ai_list.append(
-                            self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_43))
-                    gt_bmds.append(data["DXABMD"].view(-1))
+            if self.log_bmd_pcc:
+                fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                for i in range(B):
+                    inference_ai_list.append(
+                        self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
+                gt_bmds.append(data["DXABMD"].view(-1))
             total_count += B
 
         psnr /= total_count
@@ -279,7 +224,7 @@ class BMDModel(TrainingModelInt):
             pcc += pearsonr(gt_bmds, inference_ai_list)[0]
             if DDPHelper.is_initialized():
                 DDPHelper.all_reduce(pcc, DDPHelper.ReduceOp.AVG)
-            ret["BMD_PCC"] = pcc
+            ret["BMD_PCC(AVG)"] = pcc
         return ret
 
     @torch.no_grad()
@@ -288,22 +233,9 @@ class BMDModel(TrainingModelInt):
         drrs = data["drr"].to(self.device)
         fake_drrs = self.netG_up(self.netG_fus(self.netG_enc(xps)))
         fake_drrs = torch.clamp(fake_drrs, -1., 1.)
-        if self.binary:
-            drrs_ = drrs[:, 0, :, :].unsqueeze(1)
-            masks = drrs[:, 1, :, :].unsqueeze(1)
-            fake_drrs_ = fake_drrs[:, 0, :, :].unsqueeze(1)
-            fake_masks = fake_drrs[:, 1, :, :].unsqueeze(1)
-
-            ret = {"Xray": xps,
-                   "DRR": drrs_,
-                   "Mask DRR": masks,
-                   "Fake DRR": fake_drrs_,
-                   "Fake Mask": fake_masks,
-                   }
-        else:
-            ret = {"Xray": xps,
-                   "DRR": drrs,
-                   "Fake_DRR": fake_drrs}
+        ret = {"Xray": xps,
+               "DRR": drrs,
+               "Fake_DRR": fake_drrs}
         for key, val in ret.items():
             for i in range(val.shape[0]):
                 val[i] = ImageHelper.min_max_scale(val[i])

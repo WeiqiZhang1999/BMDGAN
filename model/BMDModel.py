@@ -11,6 +11,8 @@ from Utils.ImportHelper import ImportHelper
 from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 
+from Network.model.Decoder.resnet import resnet50
+from Network.model.Decoder.Upsample import Decoder
 from Network.model.HRFormer.HRFormerBlock import HighResolutionTransformer
 from Network.model.ModelHead.MultiscaleClassificationHead import MultiscaleClassificationHead
 from Network.model.ModelHead.UpsamplerHead import UpsamplerHead
@@ -40,6 +42,7 @@ class BMDModel(TrainingModelInt):
                  lambda_GC=1.,
                  log_pcc=False,
                  self_sup=False,
+                 resnet=False,
                  # clip_grad=False,
                  # clip_max_norm=0.01,
                  # clip_norm_type=2.0
@@ -50,18 +53,27 @@ class BMDModel(TrainingModelInt):
         self.device = torch.device(self.local_rank)
         self.self_sup = self_sup
 
-        self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
-        self.optimizer_config = optimizer_config
-        # self.clip_grad = clip_grad
-        # self.clip_max_norm = clip_max_norm
-        # self.clip_norm_type = clip_norm_type
-        self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
-                                                     output_nc=(64 * (2 ** 2)),
-                                                     norm_type="group",
-                                                     padding_type="reflect").to(self.device)
-        self.netG_up = ImportHelper.get_class(netG_up_config["class"])
-        netG_up_config.pop("class")
-        self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        if resnet:
+            self.netG_enc = resnet50(**netG_enc_config).to(self.device)
+            self.optimizer_config = optimizer_config
+            self.netG_fus = nn.Identity().to(self.device)
+            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+            netG_up_config.pop("class")
+            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+        else:
+            self.netG_enc = HighResolutionTransformer(**netG_enc_config).to(self.device)
+            self.optimizer_config = optimizer_config
+            # self.clip_grad = clip_grad
+            # self.clip_max_norm = clip_max_norm
+            # self.clip_norm_type = clip_norm_type
+            self.netG_fus = MultiscaleClassificationHead(input_nc=sum(self.netG_enc.output_ncs),
+                                                         output_nc=(64 * (2 ** 2)),
+                                                         norm_type="group",
+                                                         padding_type="reflect").to(self.device)
+            self.netG_up = ImportHelper.get_class(netG_up_config["class"])
+            netG_up_config.pop("class")
+            self.netG_up = self.netG_up(**netG_up_config).to(self.device)
+
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
 
         if self.rank == 0:

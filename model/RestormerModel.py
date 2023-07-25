@@ -17,10 +17,7 @@ from Utils.OSHelper import OSHelper
 from .TrainingModelInt import TrainingModelInt
 
 from Network.model.Restormer.Restormer import Restormer
-from Network.model.Restormer.SCCARestormer import SCCARestormer
-from Network.model.Restormer.DPNRestormer import DPNRestormer
-from Network.model.Restormer.NewRestormer import NewRestormer
-from Network.model.Restormer.Restormer2 import Restormer2
+from Network.model.basicsr.archs.dlgsanet_arch import DLGSANet
 from Network.model.Discriminators import MultiscaleDiscriminator
 from Network.Loss.GANLoss import LSGANLoss
 from Network.Loss.GradientCorrelationLoss2D import GradientCorrelationLoss2D
@@ -46,6 +43,7 @@ class RestormerModel(TrainingModelInt):
                  lambda_GC=1.,
                  log_pcc=False,
                  pretrain_stage=False,
+                 gen='',
                  # mode="normal"
                  ):
 
@@ -55,7 +53,10 @@ class RestormerModel(TrainingModelInt):
         self.pretrain_stage = pretrain_stage
 
         # Prepare models
-        self.netG = Restormer(**netG_config).to(self.device)
+        if gen == 'dlgsanet':
+            self.netG = DLGSANet(**netG_config).to(self.device)
+        else:
+            self.netG = Restormer(**netG_config).to(self.device)
 
         self.optimizer_config = optimizer_config
         self.netD = MultiscaleDiscriminator(input_nc=2).to(self.device)
@@ -79,6 +80,10 @@ class RestormerModel(TrainingModelInt):
             self.crit_GC = GradientCorrelationLoss2D(grad_method="sobel").to(self.device)
 
         self.log_bmd_pcc = log_pcc
+
+        self.MIN_VAL_DXA_DRR_315 = 0.
+        self.MAX_VAL_DXA_DRR_315 = 40398.234376
+        self.THRESHOLD_DXA_BMD_315 = 1591.5
 
     def config_optimizer(self):
         optimizer = ImportHelper.get_class(self.optimizer_config["class"])
@@ -156,6 +161,10 @@ class RestormerModel(TrainingModelInt):
         total_count = 0.
         psnr = torch.tensor([0.]).to(self.device)
         ssim = torch.tensor([0.]).to(self.device)
+        if self.log_bmd_pcc:
+            pcc = torch.tensor([0.]).to(self.device)
+            inference_ai_list = []
+            gt_bmds = []
 
         if self.rank == 0:
             iterator = tqdm(dataloader, desc=desc, mininterval=60, maxinterval=180)
@@ -178,6 +187,14 @@ class RestormerModel(TrainingModelInt):
                                             reduction=None, dim=(1, 2, 3), data_range=255.).sum()
             ssim += structural_similarity_index_measure(fake_drrs_, drrs_,
                                                         reduction=None, data_range=255.).sum()
+
+            if self.log_bmd_pcc:
+                fake_drrs_ = ImageHelper.denormal(fake_drrs, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                fake_drrs_ = torch.clamp(fake_drrs_, self.MIN_VAL_DXA_DRR_315, self.MAX_VAL_DXA_DRR_315)
+                for i in range(B):
+                    inference_ai_list.append(
+                        self._calc_average_intensity_with_th(fake_drrs_[i], self.THRESHOLD_DXA_BMD_315))
+                gt_bmds.append(data["DXABMD"].view(-1))
 
             total_count += B
 
@@ -293,6 +310,19 @@ class RestomerModelInference(InferenceModelInt):
                                       space,
                                       compress=True)
 
+
+
+    @staticmethod
+    def _calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
+                                        threshold: int | float) -> float | np.ndarray | torch.Tensor:
+        mask = image >= threshold
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = (image * mask).sum()
+        return numerator / area
 
 
 def weights_init(m):

@@ -819,7 +819,7 @@ class DLGSANet(nn.Module):
                  buildblock_type='edge',
                  window_size=7, idynamic_num_heads=6, idynamic_ffn_type='GDFN', idynamic_ffn_expansion_factor=2.,
                  idynamic=True,
-                 restormer_num_heads=6, restormer_ffn_type='GDFN', restormer_ffn_expansion_factor=2., tlc_flag=True, tlc_kernel=48, activation='relu',
+                 restormer_num_heads=6, restormer_ffn_type='GDFN', restormer_ffn_expansion_factor=2., tlc_flag=False, tlc_kernel=48, activation='relu',
                  upscale=4,
                  img_range=1.,
                  upsampler='',

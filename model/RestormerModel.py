@@ -211,6 +211,18 @@ class RestormerModel(TrainingModelInt):
 
         return ret
 
+    @staticmethod
+    def _calc_average_intensity_with_th(image: np.ndarray | torch.Tensor,
+                                        threshold: int | float) -> float | np.ndarray | torch.Tensor:
+        mask = image >= threshold
+        area = mask.sum()
+        if area <= 0.:
+            if isinstance(image, torch.Tensor):
+                return torch.tensor(0, dtype=image.dtype, device=image.device)
+            return 0.
+        numerator = (image * mask).sum()
+        return numerator / area
+
     @torch.no_grad()
     def log_visual(self, data):
         xps = data["xp"].to(self.device)

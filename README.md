@@ -1,1 +1,2 @@
-###This is the implementation of BMD-GAN
+# BMD-GAN
+A PyTorch implementation for BMD-GAN
